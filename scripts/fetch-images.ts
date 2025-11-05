@@ -64,11 +64,14 @@ function readListFile(): CardRef[] {
 }
 
 async function resolveRiftmanaWebp(name: string): Promise<string | null> {
-  // Heuristique: riftmana card pages semblent utiliser des URLs .webp prévisibles
   const s = slugify(name);
   const guesses = [
+    `https://riftmana.com/cards/${s}.webp`,
+    `https://www.riftmana.com/cards/${s}.webp`,
     `https://riftmana.com/images/cards/${s}.webp`,
     `https://www.riftmana.com/images/cards/${s}.webp`,
+    `https://riftmana.com/assets/cards/${s}.webp`,
+    `https://www.riftmana.com/assets/cards/${s}.webp`,
   ];
   for (const u of guesses) {
     if (await fetchHead(u)) return u;
