@@ -64,6 +64,38 @@ export default function Binder({ cards, onSetOwned }: BinderProps) {
     }
   }
 
+  function getQuantityByName(name: string): number {
+    return cards.filter((c) => c.name === name).reduce((s, c) => s + c.quantity, 0);
+  }
+
+  const [detailName, setDetailName] = useState<string | null>(null);
+  const [detailUrls, setDetailUrls] = useState<string[]>([]);
+  const [detailQty, setDetailQty] = useState<number>(0);
+
+  function openDetails(name: string) {
+    const urls = candidateImageUrls(name);
+    setDetailName(name);
+    setDetailUrls(urls);
+    setDetailQty(getQuantityByName(name));
+  }
+
+  function closeDetails() {
+    setDetailName(null);
+    setDetailUrls([]);
+    setDetailQty(0);
+  }
+
+  function applyQuantity(name: string, qty: number) {
+    const q = Math.max(0, Math.floor(qty));
+    if (q <= 0) {
+      onSetOwned({ id: "", name, rarity: "Commune", quantity: 0 });
+    } else {
+      const rarity: Rarity = "Commune";
+      const id = generateId(name, rarity, false);
+      onSetOwned({ id, name, rarity, quantity: q, isFoil: false });
+    }
+  }
+
   return (
     <section className="runeterra-frame p-4">
       <div className="mb-3 text-sm font-semibold runeterra-title">Classeur — toutes les cartes</div>
@@ -80,12 +112,24 @@ export default function Binder({ cards, onSetOwned }: BinderProps) {
                 name={n}
                 imageUrls={urls}
                 owned={owned}
-                onClick={() => toggle(n, !owned)}
+                onClick={() => openDetails(n)}
               />
             );
           })
         )}
       </div>
+      {detailName && (
+        <DetailsModal
+          name={detailName}
+          urls={detailUrls}
+          quantity={detailQty}
+          onClose={closeDetails}
+          onChangeQuantity={(newQ) => {
+            setDetailQty(Math.max(0, Math.floor(newQ)));
+            applyQuantity(detailName, newQ);
+          }}
+        />
+      )}
     </section>
   );
 }
@@ -170,6 +214,56 @@ function CardTile({
       </div>
       <div className={`px-2 py-2 ${owned ? "text-amber-100" : "text-zinc-400"}`}>
         <span className="line-clamp-2">{name}</span>
+      </div>
+    </div>
+  );
+}
+
+function DetailsModal({
+  name,
+  urls,
+  quantity,
+  onClose,
+  onChangeQuantity,
+}: {
+  name: string;
+  urls: string[];
+  quantity: number;
+  onClose: () => void;
+  onChangeQuantity: (q: number) => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
+      <div className="runeterra-frame relative grid w-full max-w-3xl grid-cols-1 overflow-hidden bg-zinc-950/90 sm:grid-cols-2" onClick={(e) => e.stopPropagation()}>
+        <div className="relative aspect-[3/4] w-full">
+          <CardImage name={name} urls={urls} owned={quantity > 0} />
+        </div>
+        <div className="flex flex-col gap-4 p-4">
+          <div className="text-lg font-semibold runeterra-title">{name}</div>
+          <div className="text-sm text-zinc-400">Rareté par défaut: Commune</div>
+          <div className="mt-2 flex items-center gap-3">
+            <button
+              className="rounded-md border border-zinc-700/60 px-3 py-2 text-zinc-200 hover:bg-zinc-800"
+              onClick={() => onChangeQuantity(quantity - 1)}
+            >
+              −
+            </button>
+            <div className="min-w-16 rounded-md border border-zinc-700/60 bg-zinc-900 px-4 py-2 text-center text-zinc-100">
+              {quantity}
+            </div>
+            <button
+              className="rounded-md border border-amber-500/60 px-3 py-2 text-amber-200 hover:bg-amber-500/10"
+              onClick={() => onChangeQuantity(quantity + 1)}
+            >
+              +
+            </button>
+          </div>
+          <div className="mt-auto flex justify-end">
+            <button className="rounded-md bg-amber-500 px-4 py-2 font-medium text-black hover:bg-amber-400" onClick={onClose}>
+              Fermer
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
