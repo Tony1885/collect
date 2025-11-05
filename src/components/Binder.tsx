@@ -45,6 +45,18 @@ function useAllCardNames(): string[] {
 
 export default function Binder({ cards, onSetOwned }: BinderProps) {
   const names = useAllCardNames();
+  const [imageMap, setImageMap] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/cards/index.json", { cache: "no-cache" });
+        if (!res.ok) return;
+        const data = (await res.json()) as Record<string, string>;
+        setImageMap(data || {});
+      } catch {}
+    })();
+  }, []);
 
   const ownedSet = useMemo(() => {
     const s = new Set<string>();
@@ -105,7 +117,7 @@ export default function Binder({ cards, onSetOwned }: BinderProps) {
         ) : (
           names.map((n) => {
             const owned = ownedSet.has(n);
-            const urls = candidateImageUrls(n);
+            const urls = [imageMap[n], ...candidateImageUrls(n)].filter(Boolean) as string[];
             return (
               <CardTile
                 key={n}
