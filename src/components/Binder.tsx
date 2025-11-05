@@ -88,13 +88,42 @@ export default function Binder({}: BinderProps) {
 
   const filteredRefs = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return refs;
+    if (!q) return refs.slice();
     return refs.filter((r) => {
       const nm = r.name.toLowerCase();
       const num = (r.number ?? "").toLowerCase();
       return nm.includes(q) || num.includes(q);
     });
   }, [refs, query]);
+
+  function parseOrder(n?: string) {
+    const t = n ?? "";
+    const base = t.split("/")[0];
+    const prefix = base.startsWith("OGS-") ? 1 : 0;
+    const star = base.includes("*") ? 1 : 0;
+    const m = base.match(/^(OG[NS])-(\d+)([a-z])?/i);
+    const num = m ? parseInt(m[2], 10) : 9999;
+    const suffixRank = m && m[3] ? 1 : 0;
+    return { prefix, num, suffixRank, star };
+  }
+
+  const ognList = useMemo(() => {
+    return filteredRefs
+      .filter((r) => (r.number ?? "").startsWith("OGN-"))
+      .sort((a, b) => {
+        const pa = parseOrder(a.number); const pb = parseOrder(b.number);
+        return pa.num - pb.num || pa.suffixRank - pb.suffixRank || pa.star - pb.star || a.name.localeCompare(b.name);
+      });
+  }, [filteredRefs]);
+
+  const ogsList = useMemo(() => {
+    return filteredRefs
+      .filter((r) => (r.number ?? "").startsWith("OGS-"))
+      .sort((a, b) => {
+        const pa = parseOrder(a.number); const pb = parseOrder(b.number);
+        return pa.num - pb.num || pa.suffixRank - pb.suffixRank || pa.star - pb.star || a.name.localeCompare(b.name);
+      });
+  }, [filteredRefs]);
 
   const gridColsClass = useMemo(() => {
     // Table statique pour Tailwind (évite les classes dynamiques non détectées)
@@ -178,9 +207,7 @@ export default function Binder({}: BinderProps) {
           {refs.length === 0 ? (
             <div className="col-span-full text-zinc-500">Chargement de la liste…</div>
           ) : (
-            filteredRefs
-              .filter((r) => (r.number ?? "").startsWith("OGN-"))
-              .map(({ name: n, number: raw }) => {
+            ognList.map(({ name: n, number: raw }) => {
             const status = statusMap[keyFor(n, raw)] || { owned: false, duplicate: false, foil: false };
             const owned = !!status.owned;
             const num = normalizeNumber(raw);
@@ -197,13 +224,11 @@ export default function Binder({}: BinderProps) {
         </div>
       )}
       {/* Proving Grounds */}
-      {setFilter !== "ogn" && filteredRefs.some((r) => (r.number ?? "").startsWith("OGS-")) && (
+      {setFilter !== "ogn" && ogsList.length > 0 && (
         <>
           <div className="mt-6 mb-2 text-sm font-semibold runeterra-title">Set Proving Grounds - Origins</div>
           <div className={`grid grid-cols-1 gap-3 sm:grid-cols-2 ${gridColsClass}`}>
-            {filteredRefs
-              .filter((r) => (r.number ?? "").startsWith("OGS-"))
-              .map(({ name: n, number: raw }) => {
+            {ogsList.map(({ name: n, number: raw }) => {
                 const status = statusMap[keyFor(n, raw)] || { owned: false, duplicate: false, foil: false };
                 const owned = !!status.owned;
                 const num = normalizeNumber(raw);

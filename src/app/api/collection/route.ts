@@ -34,35 +34,28 @@ export async function PATCH(req: Request) {
     if (!name || typeof name !== "string") {
       return NextResponse.json({ error: "name requis" }, { status: 400 });
     }
-    const fields: string[] = [];
-    const values: any[] = [];
-    if (typeof number === "string") {
-      fields.push("number");
-      values.push(number);
-    }
-    if (typeof owned === "boolean") {
-      fields.push("owned");
-      values.push(owned);
-    }
-    if (typeof duplicate === "boolean") {
-      fields.push("duplicate");
-      values.push(duplicate);
-    }
-    if (typeof foil === "boolean") {
-      fields.push("foil");
-      values.push(foil);
-    }
+    const num = number ?? "";
+    const existing = await query<{ owned: boolean; duplicate: boolean; foil: boolean }>(
+      "select owned, duplicate, foil from collection where name=$1 and number=$2",
+      [name, num]
+    );
+    const current = existing.rows[0] ?? { owned: false, duplicate: false, foil: false };
+    let nextOwned = typeof owned === "boolean" ? owned : current.owned;
+    const nextDuplicate = typeof duplicate === "boolean" ? duplicate : current.duplicate;
+    const nextFoil = typeof foil === "boolean" ? foil : current.foil;
+    // règle métier: si duplicate = true => owned = true automatiquement
+    if (nextDuplicate) nextOwned = true;
 
     await query(
       `insert into collection(name, number, owned, duplicate, foil) values($1,$2,$3,$4,$5)
        on conflict (name, number) do update set
-         owned=excluded.owned,
-         duplicate=excluded.duplicate,
-         foil=excluded.foil,
+         owned=$3,
+         duplicate=$4,
+         foil=$5,
          updated_at=now()`,
-      [name, number ?? null, owned ?? false, duplicate ?? false, foil ?? false]
+      [name, num, nextOwned, nextDuplicate, nextFoil]
     );
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, name, number: num, owned: nextOwned, duplicate: nextDuplicate, foil: nextFoil });
   } catch (e: any) {
     return NextResponse.json({ error: String(e?.message ?? e) }, { status: 500 });
   }

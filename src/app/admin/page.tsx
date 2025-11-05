@@ -63,11 +63,13 @@ export default function AdminPage() {
     const k = keyFor(row);
     const current = map[k] ?? { name: row.name, number: row.number, owned: false, duplicate: false, foil: false };
     const next = { ...current, number: row.number, [key]: value } as CardRow;
+    // règle: si duplicate=true => owned=true
+    if (key === "duplicate" && value) next.owned = true;
     setMap((m) => ({ ...m, [k]: next }));
     await fetch("/api/collection", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: row.name, number: row.number, [key]: value }),
+      body: JSON.stringify({ name: row.name, number: row.number, [key]: value, ...(key === "duplicate" && value ? { owned: true } : {}) }),
     });
   }
 
