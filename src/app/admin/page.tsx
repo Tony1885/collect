@@ -8,6 +8,7 @@ export default function AdminPage() {
   const [refs, setRefs] = useState<{ name: string; number?: string }[]>([]);
   const [map, setMap] = useState<Record<string, CardRow>>({});
   const [q, setQ] = useState("");
+  const [dbInfo, setDbInfo] = useState<string>("");
 
   useEffect(() => {
     let cancelled = false;
@@ -55,6 +56,17 @@ export default function AdminPage() {
     alert(`Vérification: list=${data?.counts?.list}, db=${data?.counts?.db}, manquantes=${data?.counts?.missing}. Colonnes manquantes: ${(data?.missingColumns ?? []).join(", ") || "aucune"}`);
   }
 
+  async function runPing() {
+    try {
+      const res = await fetch("/api/admin/ping");
+      const data = await res.json();
+      if (data?.ok) setDbInfo(`DB OK — ${data?.rows} lignes`);
+      else setDbInfo(`DB erreur: ${data?.error ?? "inconnue"}`);
+    } catch {
+      setDbInfo("DB erreur: échec ping");
+    }
+  }
+
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
     if (!s) return refs;
@@ -74,7 +86,7 @@ export default function AdminPage() {
 
   return (
     <div className="mx-auto max-w-5xl p-4">
-      <div className="mb-4 flex items-center justify-between gap-3">
+      <div className="mb-2 flex items-center justify-between gap-3">
         <h1 className="runeterra-title text-lg font-semibold text-amber-200">Admin — Collection</h1>
         <div className="flex items-center gap-2">
           <input
@@ -85,11 +97,13 @@ export default function AdminPage() {
           />
           <button className="rounded-md border border-zinc-700/60 px-3 py-2 text-zinc-300 hover:bg-zinc-800" onClick={runVerify}>Vérifier</button>
           <button className="rounded-md border border-amber-500/60 px-3 py-2 text-amber-200 hover:bg-amber-500/10" onClick={runSync}>Synchroniser</button>
+          <button className="rounded-md border border-zinc-700/60 px-3 py-2 text-zinc-300 hover:bg-zinc-800" onClick={runPing}>Ping DB</button>
           <form action="/api/admin/logout" method="post">
             <button className="rounded-md border border-zinc-700/60 px-3 py-2 text-zinc-300 hover:bg-zinc-800">Logout</button>
           </form>
         </div>
       </div>
+      {dbInfo && <div className="mb-4 text-xs text-zinc-400">{dbInfo}</div>}
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-sm">
           <thead>
