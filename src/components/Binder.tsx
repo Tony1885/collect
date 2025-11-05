@@ -10,8 +10,10 @@ export interface BinderProps {
   onSetOwned: (entry: CardEntry | null) => void; // null => remove
 }
 
-function useAllCardNames(): string[] {
-  const [names, setNames] = useState<string[]>([]);
+type CardRef = { name: string; number?: string };
+
+function useAllCardRefs(): CardRef[] {
+  const [refs, setRefs] = useState<CardRef[]>([]);
   useEffect(() => {
     let cancelled = false;
     async function loadList() {
@@ -20,17 +22,19 @@ function useAllCardNames(): string[] {
         if (!res.ok) return;
         const text = await res.text();
         const lines = text.split(/\r?\n/);
-        const out: string[] = [];
+        const out: CardRef[] = [];
         for (let i = 1; i < lines.length; i++) {
           const line = lines[i];
           if (!line) continue;
           const parts = line.split(/\t/);
           if (parts.length < 2) continue;
-          const nm = parts[1].trim();
-          if (nm) out.push(nm);
+          const num = parts[0]?.trim();
+          const nm = parts[1]?.trim();
+          if (nm) out.push({ name: nm, number: num });
         }
-        const unique = Array.from(new Set(out));
-        if (!cancelled) setNames(unique);
+        const seen = new Set<string>();
+        const unique = out.filter((c) => (seen.has(c.name) ? false : (seen.add(c.name), true)));
+        if (!cancelled) setRefs(unique);
       } catch {
         // silent
       }
@@ -40,11 +44,11 @@ function useAllCardNames(): string[] {
       cancelled = true;
     };
   }, []);
-  return names;
+  return refs;
 }
 
 export default function Binder({ cards, onSetOwned }: BinderProps) {
-  const names = useAllCardNames();
+  const refs = useAllCardRefs();
   const [imageMap, setImageMap] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -66,6 +70,12 @@ export default function Binder({ cards, onSetOwned }: BinderProps) {
     return s;
   }, [cards]);
 
+  const numberByName = useMemo(() => {
+    const m = new Map<string, string | undefined>();
+    for (const r of refs) m.set(r.name, r.number);
+    return m;
+  }, [refs]);
+
   function toggle(name: string, nextOwned: boolean) {
     if (nextOwned) {
       const rarity: Rarity = "Commune"; // défaut pour la case du classeur
@@ -85,7 +95,9 @@ export default function Binder({ cards, onSetOwned }: BinderProps) {
   const [detailQty, setDetailQty] = useState<number>(0);
 
   function openDetails(name: string) {
-    const urls = candidateImageUrls(name);
+    const num = numberByName.get(name);
+    const riftmana = num ? `https://riftmana.com/wp-content/uploads/Cards/${num}.webp` : undefined;
+    const urls = [riftmana, ...candidateImageUrls(name)].filter(Boolean) as string[];
     setDetailName(name);
     setDetailUrls(urls);
     setDetailQty(getQuantityByName(name));
@@ -112,12 +124,14 @@ export default function Binder({ cards, onSetOwned }: BinderProps) {
     <section className="runeterra-frame p-4">
       <div className="mb-3 text-sm font-semibold runeterra-title">Classeur — toutes les cartes</div>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-        {names.length === 0 ? (
+        {refs.length === 0 ? (
           <div className="col-span-full text-zinc-500">Chargement de la liste…</div>
         ) : (
-          names.map((n) => {
+          refs.map(({ name: n }) => {
             const owned = ownedSet.has(n);
-            const urls = [imageMap[n], ...candidateImageUrls(n)].filter(Boolean) as string[];
+            const num = numberByName.get(n);
+            const riftmana = num ? `https://riftmana.com/wp-content/uploads/Cards/${num}.webp` : undefined;
+            const urls = [imageMap[n], riftmana, ...candidateImageUrls(n)].filter(Boolean) as string[];
             return (
               <CardTile
                 key={n}
