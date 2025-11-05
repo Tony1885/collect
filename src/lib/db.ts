@@ -27,7 +27,8 @@ export async function ensureSchema(): Promise<void> {
 
 export async function query<T = any>(text: string, params?: any[]): Promise<{ rows: T[] }> {
   const p = getPool();
-  return await p.query(text, params);
+  const res = await p.query(text as any, params as any);
+  return { rows: res.rows as T[] };
 }
 
 

@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { CardEntry, Rarity } from "@/types";
-import { generateId } from "@/lib/storage";
+ 
 import { candidateImageUrls, initialsFromName } from "@/lib/images";
 
 export interface BinderProps {}
@@ -131,7 +130,6 @@ export default function Binder({}: BinderProps) {
 
   const [detailName, setDetailName] = useState<string | null>(null);
   const [detailUrls, setDetailUrls] = useState<string[]>([]);
-  const [detailQty, setDetailQty] = useState<number>(0);
 
   function openDetails(name: string) {
     const num = normalizeNumber(numberByName.get(name));
@@ -139,25 +137,13 @@ export default function Binder({}: BinderProps) {
     const urls = [riftmana, ...candidateImageUrls(name)].filter(Boolean) as string[];
     setDetailName(name);
     setDetailUrls(urls);
-    setDetailQty(getQuantityByName(name));
   }
 
   function closeDetails() {
     setDetailName(null);
     setDetailUrls([]);
-    setDetailQty(0);
   }
-
-  function applyQuantity(name: string, qty: number) {
-    const q = Math.max(0, Math.floor(qty));
-    if (q <= 0) {
-      onSetOwned({ id: "", name, rarity: "Commune", quantity: 0 });
-    } else {
-      const rarity: Rarity = "Commune";
-      const id = generateId(name, rarity, false);
-      onSetOwned({ id, name, rarity, quantity: q, isFoil: false });
-    }
-  }
+ 
 
   return (
     <section className="runeterra-frame p-4">
@@ -206,16 +192,7 @@ export default function Binder({}: BinderProps) {
         )}
       </div>
       {detailName && (
-        <DetailsModal
-          name={detailName}
-          urls={detailUrls}
-          quantity={detailQty}
-          onClose={closeDetails}
-          onChangeQuantity={(newQ) => {
-            setDetailQty(Math.max(0, Math.floor(newQ)));
-            applyQuantity(detailName, newQ);
-          }}
-        />
+        <DetailsModal name={detailName} urls={detailUrls} owned={ownedSet.has(detailName)} onClose={closeDetails} foil={!!statusMap[detailName]?.foil} duplicate={!!statusMap[detailName]?.duplicate} />
       )}
     </section>
   );
@@ -303,45 +280,16 @@ function CardTile({ name, imageUrls, owned, foil, duplicate, onClick }: { name: 
   );
 }
 
-function DetailsModal({
-  name,
-  urls,
-  quantity,
-  onClose,
-  onChangeQuantity,
-}: {
-  name: string;
-  urls: string[];
-  quantity: number;
-  onClose: () => void;
-  onChangeQuantity: (q: number) => void;
-}) {
+function DetailsModal({ name, urls, owned, foil, duplicate, onClose }: { name: string; urls: string[]; owned: boolean; foil?: boolean; duplicate?: boolean; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
       <div className="runeterra-frame relative grid w-full max-w-3xl grid-cols-1 overflow-hidden bg-zinc-950/90 sm:grid-cols-2" onClick={(e) => e.stopPropagation()}>
         <div className="relative aspect-[3/4] w-full">
-          <CardImage name={name} urls={urls} owned={quantity > 0} />
+          <CardImage name={name} urls={urls} owned={owned} foil={foil} duplicate={duplicate} />
         </div>
         <div className="flex flex-col gap-4 p-4">
           <div className="text-lg font-semibold runeterra-title">{name}</div>
-          <div className="text-sm text-zinc-400">Rareté par défaut: Commune</div>
-          <div className="mt-2 flex items-center gap-3">
-            <button
-              className="rounded-md border border-zinc-700/60 px-3 py-2 text-zinc-200 hover:bg-zinc-800"
-              onClick={() => onChangeQuantity(quantity - 1)}
-            >
-              −
-            </button>
-            <div className="min-w-16 rounded-md border border-zinc-700/60 bg-zinc-900 px-4 py-2 text-center text-zinc-100">
-              {quantity}
-            </div>
-            <button
-              className="rounded-md border border-amber-500/60 px-3 py-2 text-amber-200 hover:bg-amber-500/10"
-              onClick={() => onChangeQuantity(quantity + 1)}
-            >
-              +
-            </button>
-          </div>
+          <div className="text-sm text-zinc-400">Détails de la carte</div>
           <div className="mt-auto flex justify-end">
             <button className="rounded-md bg-amber-500 px-4 py-2 font-medium text-black hover:bg-amber-400" onClick={onClose}>
               Fermer

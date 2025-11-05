@@ -4,19 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import Binder from "@/components/Binder";
 
 export default function Home() {
-  function setOwnedFromBinder(entry: CardEntry | null) {
-    if (!entry) return;
-    if (entry.quantity <= 0) {
-      // retrait par nom (peut exister avec d'autres raretés) => on met quantité 0 pour les correspondances exactes si présentes
-      setCards((prev) => prev.filter((c) => c.name !== entry.name));
-      return;
-    }
-    setCards((prev) => {
-      const existing = prev.find((c) => c.id === entry.id);
-      if (!existing) return [...prev, entry];
-      return prev.map((c) => (c.id === entry.id ? { ...c, quantity: entry.quantity } : c));
-    });
-  }
 
   const title = useMemo(() => "Riftbound: League of Legends TCG", []);
 
