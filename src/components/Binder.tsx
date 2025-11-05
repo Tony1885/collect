@@ -38,8 +38,10 @@ function useAllCardRefs(): CardRef[] {
           }
           if (nm && !hasStar && !isOvernumbered) out.push({ name: nm, number: num });
         }
-        const seen = new Set<string>();
-        const unique = out.filter((c) => (seen.has(c.name) ? false : (seen.add(c.name), true)));
+        // Conserver la dernière occurrence par nom (privilégier les overnumbered en fin de liste)
+        const map = new Map<string, CardRef>();
+        for (const c of out) map.set(c.name, c);
+        const unique = Array.from(map.values());
         if (!cancelled) setRefs(unique);
       } catch {
         // silent
@@ -97,7 +99,8 @@ export default function Binder({}: BinderProps) {
   function normalizeNumber(num?: string): string | undefined {
     if (!num) return undefined;
     const trimmed = num.trim();
-    return trimmed.split("/")[0] || trimmed;
+    const base = trimmed.split("/")[0] || trimmed;
+    return base.replace(/\*/g, "");
   }
 
   const filteredRefs = useMemo(() => {
@@ -282,19 +285,10 @@ function CardTile({ name, imageUrls, owned, foil, duplicate, onClick }: { name: 
 
 function DetailsModal({ name, urls, owned, foil, duplicate, onClose }: { name: string; urls: string[]; owned: boolean; foil?: boolean; duplicate?: boolean; onClose: () => void }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
-      <div className="runeterra-frame relative grid w-full max-w-3xl grid-cols-1 overflow-hidden bg-zinc-950/90 sm:grid-cols-2" onClick={(e) => e.stopPropagation()}>
-        <div className="relative aspect-[3/4] w-full">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={onClose}>
+      <div className="relative w-full max-w-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="relative aspect-[3/4] w-full overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900">
           <CardImage name={name} urls={urls} owned={owned} foil={foil} duplicate={duplicate} />
-        </div>
-        <div className="flex flex-col gap-4 p-4">
-          <div className="text-lg font-semibold runeterra-title">{name}</div>
-          <div className="text-sm text-zinc-400">Détails de la carte</div>
-          <div className="mt-auto flex justify-end">
-            <button className="rounded-md bg-amber-500 px-4 py-2 font-medium text-black hover:bg-amber-400" onClick={onClose}>
-              Fermer
-            </button>
-          </div>
         </div>
       </div>
     </div>
