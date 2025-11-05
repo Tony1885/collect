@@ -9,30 +9,8 @@ function slugifyCardName(name: string): string {
 
 export function candidateImageUrls(name: string): string[] {
   const slug = slugifyCardName(name);
-  const spaced = name.replace(/\s+/g, "%20");
-  const underscored = name.replace(/\s+/g, "_");
-  return [
-    // LoLCards (variantes possibles)
-    `https://www.lolcards.fr/_next/image?url=/images/cards/${slug}.webp&w=640&q=75`,
-    `https://www.lolcards.fr/images/cards/${slug}.webp`,
-    `https://www.lolcards.fr/images/cards/${underscored}.webp`,
-    // PiltoverArchive (jpg/png/webp et variantes)
-    `https://piltoverarchive.com/cards/${slug}.jpg`,
-    `https://piltoverarchive.com/cards/${slug}.png`,
-    `https://piltoverarchive.com/cards/${spaced}.jpg`,
-    `https://piltoverarchive.com/cards/${spaced}.png`,
-    `https://piltoverarchive.com/cards/${underscored}.jpg`,
-    `https://piltoverarchive.com/cards/${underscored}.png`,
-    `https://piltoverarchive.com/cards/${slug}.webp`,
-    `https://piltoverarchive.com/cards/${underscored}.webp`,
-    // Riftmana (suppositions)
-    `https://riftmana.com/cards/${slug}.webp`,
-    `https://www.riftmana.com/cards/${slug}.webp`,
-    `https://riftmana.com/images/cards/${slug}.webp`,
-    `https://www.riftmana.com/images/cards/${slug}.webp`,
-    `https://riftmana.com/assets/cards/${slug}.webp`,
-    `https://www.riftmana.com/assets/cards/${slug}.webp`,
-  ];
+  // Fallback local uniquement: les fichiers peuvent être pré-téléchargés dans public/cards
+  return [`/cards/${slug}.webp`];
 }
 
 export function initialsFromName(name: string): string {

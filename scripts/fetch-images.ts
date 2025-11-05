@@ -63,20 +63,20 @@ function readListFile(): CardRef[] {
   return out.filter((c) => (seen.has(c.name) ? false : (seen.add(c.name), true)));
 }
 
-async function resolveRiftmanaWebp(name: string): Promise<string | null> {
-  const s = slugify(name);
+async function resolveRiftmanaWebpByRef(ref: CardRef): Promise<string | null> {
+  // Chemin canonique Rift Mana basé sur le numéro de carte, ex: OGN-001
+  if (ref.number) {
+    const byNumber = `https://riftmana.com/wp-content/uploads/Cards/${ref.number}.webp`;
+    if (await fetchHead(byNumber)) return byNumber;
+  }
+  // Fallback optionnel: tenter par nom slugifié sur Rift Mana (au cas où)
+  const s = slugify(ref.name);
   const guesses = [
-    `https://riftmana.com/cards/${s}.webp`,
-    `https://www.riftmana.com/cards/${s}.webp`,
-    `https://riftmana.com/images/cards/${s}.webp`,
-    `https://www.riftmana.com/images/cards/${s}.webp`,
-    `https://riftmana.com/assets/cards/${s}.webp`,
-    `https://www.riftmana.com/assets/cards/${s}.webp`,
+    `https://riftmana.com/wp-content/uploads/Cards/${s}.webp`,
   ];
   for (const u of guesses) {
     if (await fetchHead(u)) return u;
   }
-  // fallback: essayer une page de recherche si disponible (désactivé faute d’endpoint stable)
   return null;
 }
 
@@ -96,7 +96,7 @@ async function main() {
   let i = 0;
   for (const ref of refs) {
     i++;
-    const img = await resolveRiftmanaWebp(ref.name);
+    const img = await resolveRiftmanaWebpByRef(ref);
     if (!img) continue;
     mapping[ref.name] = img;
     if (!linkOnly) {

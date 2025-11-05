@@ -50,6 +50,7 @@ function useAllCardRefs(): CardRef[] {
 export default function Binder({ cards, onSetOwned }: BinderProps) {
   const refs = useAllCardRefs();
   const [imageMap, setImageMap] = useState<Record<string, string>>({});
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
     (async () => {
@@ -75,6 +76,16 @@ export default function Binder({ cards, onSetOwned }: BinderProps) {
     for (const r of refs) m.set(r.name, r.number);
     return m;
   }, [refs]);
+
+  const filteredRefs = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return refs;
+    return refs.filter((r) => {
+      const nm = r.name.toLowerCase();
+      const num = (r.number ?? "").toLowerCase();
+      return nm.includes(q) || num.includes(q);
+    });
+  }, [refs, query]);
 
   function toggle(name: string, nextOwned: boolean) {
     if (nextOwned) {
@@ -122,12 +133,23 @@ export default function Binder({ cards, onSetOwned }: BinderProps) {
 
   return (
     <section className="runeterra-frame p-4">
-      <div className="mb-3 text-sm font-semibold runeterra-title">Classeur — toutes les cartes</div>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="text-sm font-semibold runeterra-title">Classeur — toutes les cartes</div>
+        <div className="relative w-full sm:w-80">
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Rechercher par nom ou numéro (ex: OGN-001, Jinx)"
+            className="w-full rounded-md border border-zinc-700/60 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-amber-500/60 focus:outline-none"
+          />
+          <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500">⌕</div>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
         {refs.length === 0 ? (
           <div className="col-span-full text-zinc-500">Chargement de la liste…</div>
         ) : (
-          refs.map(({ name: n }) => {
+          filteredRefs.map(({ name: n }) => {
             const owned = ownedSet.has(n);
             const num = numberByName.get(n);
             const riftmana = num ? `https://riftmana.com/wp-content/uploads/Cards/${num}.webp` : undefined;
@@ -214,7 +236,7 @@ function CardTile({
     const midY = rect.height / 2;
     const rotateY = ((x - midX) / midX) * 8; // -8..8
     const rotateX = -((y - midY) / midY) * 8; // -8..8
-    setTransform(`perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.02)`);
+    setTransform(`perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.03) translateY(-4px)`);
   }
 
   function handleLeave() {
@@ -226,7 +248,7 @@ function CardTile({
       className={`group relative flex cursor-pointer flex-col overflow-hidden rounded-lg border text-sm transition ${
         owned ? "border-amber-500/40 bg-zinc-900" : "border-zinc-800 bg-zinc-900"
       }`}
-      style={{ transform, transition: "transform 120ms ease" }}
+      style={{ transform, transition: "transform 140ms ease, box-shadow 140ms ease" }}
       onMouseMove={handleMove}
       onMouseLeave={handleLeave}
       onClick={onClick}
