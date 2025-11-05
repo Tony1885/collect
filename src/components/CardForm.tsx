@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import type { CardEntry, Rarity } from "@/types";
 import { generateId } from "@/lib/storage";
+import { CARD_NAMES } from "@/data/cards";
 
 const RARITIES: Rarity[] = [
   "Commune",
@@ -27,9 +28,14 @@ export default function CardForm({ onAdd }: CardFormProps) {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!canSubmit) return;
+    // Normaliser le nom saisi vers l’entrée de la liste si correspondance insensible à la casse
+    const normalized = (() => {
+      const idx = CARD_NAMES.findIndex((n) => n.toLowerCase() === name.trim().toLowerCase());
+      return idx >= 0 ? CARD_NAMES[idx] : name.trim();
+    })();
     const entry: CardEntry = {
-      id: generateId(name, rarity, isFoil),
-      name: name.trim(),
+      id: generateId(normalized, rarity, isFoil),
+      name: normalized,
       rarity,
       quantity,
       isFoil,
@@ -41,12 +47,20 @@ export default function CardForm({ onAdd }: CardFormProps) {
   return (
     <form onSubmit={handleSubmit} className="w-full rounded-xl border border-zinc-800/60 bg-gradient-to-br from-zinc-950 to-zinc-900 p-4 shadow-[0_0_40px_-15px_rgba(0,0,0,0.8)]">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-5">
-        <input
-          className="col-span-2 rounded-lg border border-zinc-700/60 bg-zinc-900 px-3 py-2 text-zinc-100 placeholder-zinc-500 outline-none focus:border-amber-400/70"
-          placeholder="Nom de la carte"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
+        <div className="col-span-2">
+          <input
+            className="w-full rounded-lg border border-zinc-700/60 bg-zinc-900 px-3 py-2 text-zinc-100 placeholder-zinc-500 outline-none focus:border-amber-400/70"
+            placeholder="Nom de la carte"
+            list="card-names"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+          <datalist id="card-names">
+            {CARD_NAMES.map((n) => (
+              <option key={n} value={n} />
+            ))}
+          </datalist>
+        </div>
         <select
           className="rounded-lg border border-zinc-700/60 bg-zinc-900 px-3 py-2 text-zinc-100 outline-none focus:border-amber-400/70"
           value={rarity}
