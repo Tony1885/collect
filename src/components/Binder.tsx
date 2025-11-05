@@ -29,33 +29,8 @@ function useAllCardRefs(): CardRef[] {
           if (nm) out.push({ name: nm, number: num });
         }
         // Dédupliquer par nom: garder une entrée canonique (préférer non-variant, sans *, numéro le + petit)
-        function rank(n?: string): { hasStar: boolean; hasSuffix: boolean; num: number } {
-          const base = (n ?? "").split("/")[0];
-          const hasStar = /\*/.test(base);
-          const m = base.match(/^(OGN|OGS)-(\d+)([a-z])?/i);
-          const num = m ? parseInt(m[2], 10) : Number.MAX_SAFE_INTEGER;
-          const hasSuffix = !!(m && m[3]);
-          return { hasStar, hasSuffix, num: isNaN(num) ? Number.MAX_SAFE_INTEGER : num };
-        }
-        const map = new Map<string, CardRef>();
-        for (const c of out) {
-          const prev = map.get(c.name);
-          if (!prev) {
-            map.set(c.name, c);
-            continue;
-          }
-          const rPrev = rank(prev.number);
-          const rNext = rank(c.number);
-          // meilleur si: pas d'étoile vs étoile; pas de suffixe vs suffixe; numéro plus petit
-          const better = (
-            (rPrev.hasStar && !rNext.hasStar) ||
-            (!rPrev.hasStar && !rPrev.hasSuffix && rNext.hasSuffix) ||
-            (!rPrev.hasStar && !rNext.hasStar && rPrev.hasSuffix === rNext.hasSuffix && rNext.num < rPrev.num)
-          );
-          if (better) map.set(c.name, c);
-        }
-        const unique = Array.from(map.values());
-        if (!cancelled) setRefs(unique);
+        // 1 ligne par numéro: garder toutes les entrées
+        if (!cancelled) setRefs(out);
       } catch {
         // silent
       }
@@ -160,7 +135,7 @@ export default function Binder({}: BinderProps) {
   return (
     <section className="runeterra-frame p-4">
       <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="text-sm font-semibold runeterra-title">Classeur — toutes les cartes</div>
+        <div className="text-sm font-semibold runeterra-title">Set de Base - Origins</div>
         <div className="flex w-full flex-col items-stretch gap-3 sm:w-auto sm:flex-row sm:items-center">
           <div className="relative w-full sm:w-80">
             <input
@@ -190,7 +165,9 @@ export default function Binder({}: BinderProps) {
         {refs.length === 0 ? (
           <div className="col-span-full text-zinc-500">Chargement de la liste…</div>
         ) : (
-          filteredRefs.map(({ name: n, number: raw }) => {
+          filteredRefs
+            .filter((r) => (r.number ?? "").startsWith("OGN-"))
+            .map(({ name: n, number: raw }) => {
             const owned = ownedSet.has(n);
             const num = normalizeNumber(raw);
             const riftmana = num ? `https://riftmana.com/wp-content/uploads/Cards/${num}.webp` : undefined;
@@ -204,6 +181,28 @@ export default function Binder({}: BinderProps) {
           })
         )}
       </div>
+      {/* Proving Grounds */}
+      {filteredRefs.some((r) => (r.number ?? "").startsWith("OGS-")) && (
+        <>
+          <div className="mt-6 mb-2 text-sm font-semibold runeterra-title">Set Proving Grounds - Origins</div>
+          <div className={`grid grid-cols-1 gap-3 sm:grid-cols-2 ${gridColsClass}`}>
+            {filteredRefs
+              .filter((r) => (r.number ?? "").startsWith("OGS-"))
+              .map(({ name: n, number: raw }) => {
+                const owned = ownedSet.has(n);
+                const num = normalizeNumber(raw);
+                const riftmana = num ? `https://riftmana.com/wp-content/uploads/Cards/${num}.webp` : undefined;
+                const urls = [imageMap[n], riftmana, ...candidateImageUrls(n)].filter(Boolean) as string[];
+                const foil = !!statusMap[n]?.foil;
+                const duplicate = !!statusMap[n]?.duplicate;
+                const displayNum = raw ? (raw.split("-")[1] || raw) : "";
+                return (
+                  <CardTile key={`${n}-${num ?? ""}`} name={n} imageUrls={urls} owned={owned} foil={foil} duplicate={duplicate} numberText={displayNum} onClick={() => openDetails(n, raw)} />
+                );
+              })}
+          </div>
+        </>
+      )}
       {detailName && (
         <DetailsModal name={detailName} urls={detailUrls} owned={ownedSet.has(detailName)} onClose={closeDetails} foil={!!statusMap[detailName]?.foil} duplicate={!!statusMap[detailName]?.duplicate} />
       )}

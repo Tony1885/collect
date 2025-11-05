@@ -24,6 +24,11 @@ export async function ensureSchema(): Promise<void> {
     foil boolean not null default false,
     updated_at timestamptz not null default now()
   );
+  -- normaliser number pour migration
+  update public.collection set number='' where number is null;
+  begin
+    alter table public.collection alter column number set not null;
+  exception when others then null; end;
   -- tenter de migrer la clé primaire vers (name, number)
   do $$
   declare

@@ -23,8 +23,9 @@ export async function POST() {
       if (!name) continue;
       total++;
       await query(
-        "insert into collection(name, number) values($1,$2) on conflict(name) do update set number=excluded.number, updated_at=now()",
-        [name, number ?? null]
+        `insert into collection(name, number) values($1,$2)
+         on conflict(name, number) do update set number=excluded.number, updated_at=now()`,
+        [name, number ?? ""]
       );
       upserts++;
     }
