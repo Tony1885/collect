@@ -107,6 +107,9 @@ export default function AdminPage() {
           <button className="rounded-md border border-zinc-700/60 px-3 py-2 text-zinc-300 hover:bg-zinc-800" onClick={runVerify}>Vérifier</button>
           <button className="rounded-md border border-amber-500/60 px-3 py-2 text-amber-200 hover:bg-amber-500/10" onClick={runSync}>Synchroniser</button>
           <button className="rounded-md border border-zinc-700/60 px-3 py-2 text-zinc-300 hover:bg-zinc-800" onClick={runPing}>Ping DB</button>
+          <a href="/" className="rounded-md border border-zinc-700/60 px-3 py-2 text-zinc-300 hover:bg-zinc-800" aria-label="Accueil">
+            🏠 Home
+          </a>
           <form action="/api/admin/logout" method="post">
             <button className="rounded-md border border-zinc-700/60 px-3 py-2 text-zinc-300 hover:bg-zinc-800">Logout</button>
           </form>
