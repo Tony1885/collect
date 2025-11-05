@@ -72,11 +72,9 @@ export default function Binder({}: BinderProps) {
     })();
   }, []);
 
-  const ownedSet = useMemo(() => {
-    const s = new Set<string>();
-    for (const name in statusMap) if (statusMap[name]?.owned) s.add(name);
-    return s;
-  }, [statusMap]);
+  function keyFor(name: string, rawNum?: string): string {
+    return `${name}|||${rawNum ?? ''}`;
+  }
 
   // Plus de map par nom: on utilise le numéro de chaque entrée telle que listée
 
@@ -117,6 +115,7 @@ export default function Binder({}: BinderProps) {
 
   const [detailName, setDetailName] = useState<string | null>(null);
   const [detailUrls, setDetailUrls] = useState<string[]>([]);
+  const [detailRawNum, setDetailRawNum] = useState<string | null>(null);
 
   function openDetails(name: string, rawNum?: string) {
     const num = normalizeNumber(rawNum);
@@ -124,11 +123,13 @@ export default function Binder({}: BinderProps) {
     const urls = [riftmana, ...candidateImageUrls(name)].filter(Boolean) as string[];
     setDetailName(name);
     setDetailUrls(urls);
+    setDetailRawNum(rawNum ?? null);
   }
 
   function closeDetails() {
     setDetailName(null);
     setDetailUrls([]);
+    setDetailRawNum(null);
   }
  
 
@@ -168,12 +169,13 @@ export default function Binder({}: BinderProps) {
           filteredRefs
             .filter((r) => (r.number ?? "").startsWith("OGN-"))
             .map(({ name: n, number: raw }) => {
-            const owned = ownedSet.has(n);
+            const status = statusMap[keyFor(n, raw)] || { owned: false, duplicate: false, foil: false };
+            const owned = !!status.owned;
             const num = normalizeNumber(raw);
             const riftmana = num ? `https://riftmana.com/wp-content/uploads/Cards/${num}.webp` : undefined;
             const urls = [imageMap[n], riftmana, ...candidateImageUrls(n)].filter(Boolean) as string[];
-            const foil = !!statusMap[n]?.foil;
-            const duplicate = !!statusMap[n]?.duplicate;
+            const foil = !!status.foil;
+            const duplicate = !!status.duplicate;
             const displayNum = raw ? (raw.split("-")[1] || raw) : "";
             return (
               <CardTile key={`${n}-${num ?? ""}`} name={n} imageUrls={urls} owned={owned} foil={foil} duplicate={duplicate} numberText={displayNum} onClick={() => openDetails(n, raw)} />
@@ -189,12 +191,13 @@ export default function Binder({}: BinderProps) {
             {filteredRefs
               .filter((r) => (r.number ?? "").startsWith("OGS-"))
               .map(({ name: n, number: raw }) => {
-                const owned = ownedSet.has(n);
+                const status = statusMap[keyFor(n, raw)] || { owned: false, duplicate: false, foil: false };
+                const owned = !!status.owned;
                 const num = normalizeNumber(raw);
                 const riftmana = num ? `https://riftmana.com/wp-content/uploads/Cards/${num}.webp` : undefined;
                 const urls = [imageMap[n], riftmana, ...candidateImageUrls(n)].filter(Boolean) as string[];
-                const foil = !!statusMap[n]?.foil;
-                const duplicate = !!statusMap[n]?.duplicate;
+                const foil = !!status.foil;
+                const duplicate = !!status.duplicate;
                 const displayNum = raw ? (raw.split("-")[1] || raw) : "";
                 return (
                   <CardTile key={`${n}-${num ?? ""}`} name={n} imageUrls={urls} owned={owned} foil={foil} duplicate={duplicate} numberText={displayNum} onClick={() => openDetails(n, raw)} />
@@ -204,7 +207,14 @@ export default function Binder({}: BinderProps) {
         </>
       )}
       {detailName && (
-        <DetailsModal name={detailName} urls={detailUrls} owned={ownedSet.has(detailName)} onClose={closeDetails} foil={!!statusMap[detailName]?.foil} duplicate={!!statusMap[detailName]?.duplicate} />
+        <DetailsModal
+          name={detailName}
+          urls={detailUrls}
+          owned={!!statusMap[keyFor(detailName, detailRawNum ?? undefined)]?.owned}
+          foil={!!statusMap[keyFor(detailName, detailRawNum ?? undefined)]?.foil}
+          duplicate={!!statusMap[keyFor(detailName, detailRawNum ?? undefined)]?.duplicate}
+          onClose={closeDetails}
+        />
       )}
     </section>
   );
