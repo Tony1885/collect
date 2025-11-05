@@ -7,10 +7,13 @@ export async function GET() {
   try {
     await ensureSchema();
     const { rows } = await query<{ name: string; number: string | null; owned: boolean; duplicate: boolean; foil: boolean }>(
-      "select name, number, owned, duplicate, foil from collection order by name asc"
+      "select name, number, owned, duplicate, foil from collection order by name asc, number asc"
     );
-    const mapping: Record<string, { number?: string; owned: boolean; duplicate: boolean; foil: boolean }> = {};
-    for (const r of rows) mapping[r.name] = { number: r.number ?? undefined, owned: r.owned, duplicate: r.duplicate, foil: r.foil };
+    const mapping: Record<string, { owned: boolean; duplicate: boolean; foil: boolean }> = {};
+    for (const r of rows) {
+      const key = `${r.name}|||${r.number ?? ''}`;
+      mapping[key] = { owned: r.owned, duplicate: r.duplicate, foil: r.foil };
+    }
     return NextResponse.json(mapping, { status: 200 });
   } catch (e: any) {
     return NextResponse.json({ error: String(e?.message ?? e) }, { status: 500 });
@@ -50,19 +53,15 @@ export async function PATCH(req: Request) {
       values.push(foil);
     }
 
-    const existing = await query("select 1 from collection where name=$1", [name]);
-    if (existing.rows.length === 0) {
-      await query("insert into collection(name, number, owned, duplicate, foil) values($1,$2,$3,$4,$5)", [
-        name,
-        number ?? null,
-        owned ?? false,
-        duplicate ?? false,
-        foil ?? false,
-      ]);
-    } else if (fields.length > 0) {
-      const sets = fields.map((f, i) => `${f}=$${i + 2}`).join(", ");
-      await query(`update collection set ${sets}, updated_at=now() where name=$1`, [name, ...values]);
-    }
+    await query(
+      `insert into collection(name, number, owned, duplicate, foil) values($1,$2,$3,$4,$5)
+       on conflict (name, number) do update set
+         owned=excluded.owned,
+         duplicate=excluded.duplicate,
+         foil=excluded.foil,
+         updated_at=now()`,
+      [name, number ?? null, owned ?? false, duplicate ?? false, foil ?? false]
+    );
     return NextResponse.json({ ok: true });
   } catch (e: any) {
     return NextResponse.json({ error: String(e?.message ?? e) }, { status: 500 });

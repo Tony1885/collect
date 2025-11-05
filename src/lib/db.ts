@@ -24,6 +24,38 @@ export async function ensureSchema(): Promise<void> {
     foil boolean not null default false,
     updated_at timestamptz not null default now()
   );
+  -- tenter de migrer la clé primaire vers (name, number)
+  do $$
+  declare
+    pk_name text;
+    col_count int;
+  begin
+    select tc.constraint_name into pk_name
+    from information_schema.table_constraints tc
+    where tc.table_schema='public' and tc.table_name='collection' and tc.constraint_type='PRIMARY KEY'
+    limit 1;
+
+    if pk_name is null then
+      begin
+        execute 'alter table public.collection add primary key (name, number)';
+      exception when others then
+        -- ignore errors if already set by race
+        null;
+      end;
+    else
+      select count(*) into col_count
+      from information_schema.key_column_usage k
+      where k.table_schema='public' and k.table_name='collection' and k.constraint_name=pk_name;
+      if col_count = 1 then
+        begin
+          execute 'alter table public.collection drop constraint ' || pk_name;
+        exception when others then null; end;
+        begin
+          execute 'alter table public.collection add primary key (name, number)';
+        exception when others then null; end;
+      end if;
+    end if;
+  end $$;
   `;
   await getPool().query(sql);
 }

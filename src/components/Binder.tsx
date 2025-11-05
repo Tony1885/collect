@@ -295,10 +295,32 @@ function CardTile({ name, imageUrls, owned, foil, duplicate, numberText, onClick
 }
 
 function DetailsModal({ name, urls, owned, foil, duplicate, onClose }: { name: string; urls: string[]; owned: boolean; foil?: boolean; duplicate?: boolean; onClose: () => void }) {
+  const [transform, setTransform] = useState<string>("perspective(1200px) rotateX(0deg) rotateY(0deg) scale(1)");
+
+  function handleMove(e: React.MouseEvent<HTMLDivElement>) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const midX = rect.width / 2;
+    const midY = rect.height / 2;
+    const rotateY = ((x - midX) / midX) * 10; // -10..10
+    const rotateX = -((y - midY) / midY) * 10; // -10..10
+    setTransform(`perspective(1200px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.03)`);
+  }
+
+  function handleLeave() {
+    setTransform("perspective(1200px) rotateX(0deg) rotateY(0deg) scale(1)");
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={onClose}>
       <div className="relative w-full max-w-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="relative aspect-[3/4] w-full overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900">
+        <div
+          className="relative aspect-[3/4] w-full overflow-hidden rounded-lg border border-zinc-800 bg-zinc-900"
+          onMouseMove={handleMove}
+          onMouseLeave={handleLeave}
+          style={{ transform, transition: "transform 160ms ease" }}
+        >
           <CardImage name={name} urls={urls} owned={owned} foil={foil} duplicate={duplicate} />
         </div>
       </div>
