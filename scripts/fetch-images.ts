@@ -15,6 +15,11 @@ import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 
 interface CardRef { number?: string; name: string }
+function normalizeNumber(num?: string): string | undefined {
+  if (!num) return undefined;
+  const trimmed = num.trim();
+  return trimmed.split("/")[0] || trimmed;
+}
 
 function slugify(name: string): string {
   return name
@@ -65,8 +70,9 @@ function readListFile(): CardRef[] {
 
 async function resolveRiftmanaWebpByRef(ref: CardRef): Promise<string | null> {
   // Chemin canonique Rift Mana basé sur le numéro de carte, ex: OGN-001
-  if (ref.number) {
-    const byNumber = `https://riftmana.com/wp-content/uploads/Cards/${ref.number}.webp`;
+  const normalized = normalizeNumber(ref.number);
+  if (normalized) {
+    const byNumber = `https://riftmana.com/wp-content/uploads/Cards/${normalized}.webp`;
     if (await fetchHead(byNumber)) return byNumber;
   }
   // Fallback optionnel: tenter par nom slugifié sur Rift Mana (au cas où)

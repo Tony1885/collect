@@ -77,6 +77,12 @@ export default function Binder({ cards, onSetOwned }: BinderProps) {
     return m;
   }, [refs]);
 
+  function normalizeNumber(num?: string): string | undefined {
+    if (!num) return undefined;
+    const trimmed = num.trim();
+    return trimmed.split("/")[0] || trimmed;
+  }
+
   const filteredRefs = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return refs;
@@ -106,7 +112,7 @@ export default function Binder({ cards, onSetOwned }: BinderProps) {
   const [detailQty, setDetailQty] = useState<number>(0);
 
   function openDetails(name: string) {
-    const num = numberByName.get(name);
+    const num = normalizeNumber(numberByName.get(name));
     const riftmana = num ? `https://riftmana.com/wp-content/uploads/Cards/${num}.webp` : undefined;
     const urls = [riftmana, ...candidateImageUrls(name)].filter(Boolean) as string[];
     setDetailName(name);
@@ -145,13 +151,13 @@ export default function Binder({ cards, onSetOwned }: BinderProps) {
           <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500">⌕</div>
         </div>
       </div>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
         {refs.length === 0 ? (
           <div className="col-span-full text-zinc-500">Chargement de la liste…</div>
         ) : (
           filteredRefs.map(({ name: n }) => {
             const owned = ownedSet.has(n);
-            const num = numberByName.get(n);
+            const num = normalizeNumber(numberByName.get(n));
             const riftmana = num ? `https://riftmana.com/wp-content/uploads/Cards/${num}.webp` : undefined;
             const urls = [imageMap[n], riftmana, ...candidateImageUrls(n)].filter(Boolean) as string[];
             return (

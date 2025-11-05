@@ -61,15 +61,10 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-amber-900/20 via-zinc-950 to-black">
-      <main className="mx-auto max-w-5xl space-y-5 px-4 py-8">
-        <header className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <img src="/logo%20riftbound.png" alt="Riftbound" className="h-10 w-auto" />
-            <h1 className="bg-gradient-to-r from-amber-300 to-yellow-600 bg-clip-text text-2xl font-extrabold uppercase tracking-wide text-transparent drop-shadow-[0_0_10px_rgba(255,200,50,0.25)]">
-              {title}
-            </h1>
-          </div>
-          <div className="text-sm font-semibold text-amber-300/90">Origins — Set principal</div>
+      <main className="mx-auto max-w-7xl space-y-5 px-4 py-8">
+        <header className="flex flex-col items-center gap-2">
+          <img src="/logo%20riftbound.png" alt="Riftbound" className="h-16 w-auto" />
+          <div className="text-xs font-semibold text-amber-300/90">Origins — Set principal</div>
         </header>
 
         <Binder cards={cards} onSetOwned={setOwnedFromBinder} />
