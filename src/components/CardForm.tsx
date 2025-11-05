@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { CardEntry, Rarity } from "@/types";
 import { generateId } from "@/lib/storage";
 import { CARD_NAMES } from "@/data/cards";
@@ -23,6 +23,37 @@ export default function CardForm({ onAdd }: CardFormProps) {
   const [rarity, setRarity] = useState<Rarity>("Commune");
   const [quantity, setQuantity] = useState<number>(1);
   const [isFoil, setIsFoil] = useState<boolean>(false);
+  const [loadedNames, setLoadedNames] = useState<string[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadList() {
+      try {
+        const res = await fetch("/liste.txt", { cache: "force-cache" });
+        if (!res.ok) return;
+        const text = await res.text();
+        const lines = text.split(/\r?\n/);
+        const names: string[] = [];
+        for (let i = 1; i < lines.length; i++) {
+          const line = lines[i];
+          if (!line) continue;
+          const parts = line.split(/\t/);
+          if (parts.length < 2) continue;
+          const nm = parts[1].trim();
+          if (nm) names.push(nm);
+        }
+        // dédoublonner en conservant l'ordre
+        const unique: string[] = Array.from(new Set(names));
+        if (!cancelled) setLoadedNames(unique);
+      } catch {
+        // fallback silencieux
+      }
+    }
+    loadList();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const canSubmit = useMemo(() => name.trim().length > 0 && quantity > 0, [name, quantity]);
 
@@ -66,7 +97,7 @@ export default function CardForm({ onAdd }: CardFormProps) {
               <option value="__placeholder__" disabled>
                 Sélectionner un nom de carte
               </option>
-              {CARD_NAMES.map((n) => (
+              {(loadedNames ?? CARD_NAMES).map((n) => (
                 <option key={n} value={n}>
                   {n}
                 </option>
