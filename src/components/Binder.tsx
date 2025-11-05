@@ -48,6 +48,7 @@ export default function Binder({}: BinderProps) {
   const [imageMap, setImageMap] = useState<Record<string, string>>({});
   const [query, setQuery] = useState("");
   const [cols, setCols] = useState<number>(4);
+  const [setFilter, setSetFilter] = useState<"all" | "ogn" | "ogs">("all");
   const [statusMap, setStatusMap] = useState<Record<string, { owned: boolean; duplicate: boolean; foil: boolean }>>({});
 
   useEffect(() => {
@@ -147,6 +148,16 @@ export default function Binder({}: BinderProps) {
             />
             <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500">⌕</div>
           </div>
+          <select
+            value={setFilter}
+            onChange={(e) => setSetFilter(e.target.value as any)}
+            className="rounded-md border border-zinc-700/60 bg-zinc-900 px-2 py-2 text-sm text-zinc-100"
+            aria-label="Filtrer par set"
+          >
+            <option value="all">Tous les sets</option>
+            <option value="ogn">Set de Base (OGN)</option>
+            <option value="ogs">Proving Grounds (OGS)</option>
+          </select>
           <div className="flex items-center gap-2">
             <label className="text-xs text-zinc-400">Cartes/ligne</label>
             <input
@@ -162,13 +173,14 @@ export default function Binder({}: BinderProps) {
           </div>
         </div>
       </div>
-      <div className={`grid grid-cols-1 gap-3 sm:grid-cols-2 ${gridColsClass}`}>
-        {refs.length === 0 ? (
-          <div className="col-span-full text-zinc-500">Chargement de la liste…</div>
-        ) : (
-          filteredRefs
-            .filter((r) => (r.number ?? "").startsWith("OGN-"))
-            .map(({ name: n, number: raw }) => {
+      {setFilter !== "ogs" && (
+        <div className={`grid grid-cols-1 gap-3 sm:grid-cols-2 ${gridColsClass}`}>
+          {refs.length === 0 ? (
+            <div className="col-span-full text-zinc-500">Chargement de la liste…</div>
+          ) : (
+            filteredRefs
+              .filter((r) => (r.number ?? "").startsWith("OGN-"))
+              .map(({ name: n, number: raw }) => {
             const status = statusMap[keyFor(n, raw)] || { owned: false, duplicate: false, foil: false };
             const owned = !!status.owned;
             const num = normalizeNumber(raw);
@@ -179,12 +191,13 @@ export default function Binder({}: BinderProps) {
             const displayNum = raw ? (raw.split("-")[1] || raw) : "";
             return (
               <CardTile key={`${n}-${num ?? ""}`} name={n} imageUrls={urls} owned={owned} foil={foil} duplicate={duplicate} numberText={displayNum} onClick={() => openDetails(n, raw)} />
-            );
-          })
-        )}
-      </div>
+              );
+            })
+          )}
+        </div>
+      )}
       {/* Proving Grounds */}
-      {filteredRefs.some((r) => (r.number ?? "").startsWith("OGS-")) && (
+      {setFilter !== "ogn" && filteredRefs.some((r) => (r.number ?? "").startsWith("OGS-")) && (
         <>
           <div className="mt-6 mb-2 text-sm font-semibold runeterra-title">Set Proving Grounds - Origins</div>
           <div className={`grid grid-cols-1 gap-3 sm:grid-cols-2 ${gridColsClass}`}>
