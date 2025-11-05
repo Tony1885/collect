@@ -26,17 +26,7 @@ function useAllCardRefs(): CardRef[] {
           if (parts.length < 2) continue;
           const num = parts[0]?.trim();
           const nm = parts[1]?.trim();
-          // Filtrer les OGN overnumbered (>298) et les variantes étoilées
-          const base = (num ?? "").split("/")[0];
-          const hasStar = base.includes("*");
-          let isOvernumbered = false;
-          if (/^OGN-/i.test(base)) {
-            const cleaned = base.replace(/\*$/, "");
-            const m = cleaned.match(/^OGN-(\d+)/i);
-            const n = m ? parseInt(m[1], 10) : NaN;
-            if (!isNaN(n) && n > 298) isOvernumbered = true;
-          }
-          if (nm && !hasStar && !isOvernumbered) out.push({ name: nm, number: num });
+          if (nm) out.push({ name: nm, number: num });
         }
         // Conserver la dernière occurrence par nom (privilégier les overnumbered en fin de liste)
         const map = new Map<string, CardRef>();
@@ -90,11 +80,7 @@ export default function Binder({}: BinderProps) {
     return s;
   }, [statusMap]);
 
-  const numberByName = useMemo(() => {
-    const m = new Map<string, string | undefined>();
-    for (const r of refs) m.set(r.name, r.number);
-    return m;
-  }, [refs]);
+  // Plus de map par nom: on utilise le numéro de chaque entrée telle que listée
 
   function normalizeNumber(num?: string): string | undefined {
     if (!num) return undefined;
@@ -134,8 +120,8 @@ export default function Binder({}: BinderProps) {
   const [detailName, setDetailName] = useState<string | null>(null);
   const [detailUrls, setDetailUrls] = useState<string[]>([]);
 
-  function openDetails(name: string) {
-    const num = normalizeNumber(numberByName.get(name));
+  function openDetails(name: string, rawNum?: string) {
+    const num = normalizeNumber(rawNum);
     const riftmana = num ? `https://riftmana.com/wp-content/uploads/Cards/${num}.webp` : undefined;
     const urls = [riftmana, ...candidateImageUrls(name)].filter(Boolean) as string[];
     setDetailName(name);
@@ -181,15 +167,16 @@ export default function Binder({}: BinderProps) {
         {refs.length === 0 ? (
           <div className="col-span-full text-zinc-500">Chargement de la liste…</div>
         ) : (
-          filteredRefs.map(({ name: n }) => {
+          filteredRefs.map(({ name: n, number: raw }) => {
             const owned = ownedSet.has(n);
-            const num = normalizeNumber(numberByName.get(n));
+            const num = normalizeNumber(raw);
             const riftmana = num ? `https://riftmana.com/wp-content/uploads/Cards/${num}.webp` : undefined;
             const urls = [imageMap[n], riftmana, ...candidateImageUrls(n)].filter(Boolean) as string[];
             const foil = !!statusMap[n]?.foil;
             const duplicate = !!statusMap[n]?.duplicate;
+            const displayNum = raw ? (raw.split("-")[1] || raw) : "";
             return (
-              <CardTile key={n} name={n} imageUrls={urls} owned={owned} foil={foil} duplicate={duplicate} onClick={() => openDetails(n)} />
+              <CardTile key={`${n}-${num ?? ""}`} name={n} imageUrls={urls} owned={owned} foil={foil} duplicate={duplicate} numberText={displayNum} onClick={() => openDetails(n, raw)} />
             );
           })
         )}
@@ -241,7 +228,7 @@ function CardImage({ name, urls, owned, foil, duplicate }: { name: string; urls:
   );
 }
 
-function CardTile({ name, imageUrls, owned, foil, duplicate, onClick }: { name: string; imageUrls: string[]; owned: boolean; foil?: boolean; duplicate?: boolean; onClick: () => void }) {
+function CardTile({ name, imageUrls, owned, foil, duplicate, numberText, onClick }: { name: string; imageUrls: string[]; owned: boolean; foil?: boolean; duplicate?: boolean; numberText?: string; onClick: () => void }) {
   const [transform, setTransform] = useState<string>("perspective(800px) rotateX(0deg) rotateY(0deg) scale(1)");
 
   function handleMove(e: React.MouseEvent<HTMLDivElement>) {
@@ -276,8 +263,9 @@ function CardTile({ name, imageUrls, owned, foil, duplicate, onClick }: { name: 
           style={{ background: "radial-gradient(600px circle at var(--mx,50%) var(--my,50%), rgba(255,255,255,0.1), transparent 40%)" }}
         />
       </div>
-      <div className={`px-2 py-2 ${owned ? "text-amber-100" : "text-zinc-400"}`}>
+      <div className={`px-2 py-2 ${owned ? "text-amber-100" : "text-zinc-400"} flex items-center justify-between`}>
         <span className="line-clamp-2">{name}</span>
+        {numberText && <span className="ml-2 shrink-0 text-xs text-zinc-500">{numberText}</span>}
       </div>
     </div>
   );

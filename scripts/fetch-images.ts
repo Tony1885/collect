@@ -61,21 +61,9 @@ function readListFile(): CardRef[] {
     if (parts.length < 2) continue;
     const number = parts[0]?.trim();
     const name = parts[1]?.trim();
-    // Filtrer les OGN overnumbered (>298) et les variantes étoilées
-    const base = (number ?? "").split("/")[0];
-    const hasStar = base.includes("*");
-    let isOvernumbered = false;
-    if (/^OGN-/i.test(base)) {
-      const cleaned = base.replace(/\*$/, "");
-      const m = cleaned.match(/^OGN-(\d+)/i);
-      const n = m ? parseInt(m[1], 10) : NaN;
-      if (!isNaN(n) && n > 298) isOvernumbered = true;
-    }
-    if (name && !hasStar && !isOvernumbered) out.push({ number, name });
+    if (name) out.push({ number, name });
   }
-  // dédoublonner par nom
-  const seen = new Set<string>();
-  return out.filter((c) => (seen.has(c.name) ? false : (seen.add(c.name), true)));
+  return out;
 }
 
 async function resolveRiftmanaWebpByRef(ref: CardRef): Promise<string | null> {
