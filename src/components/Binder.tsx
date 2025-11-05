@@ -28,11 +28,8 @@ function useAllCardRefs(): CardRef[] {
           const nm = parts[1]?.trim();
           if (nm) out.push({ name: nm, number: num });
         }
-        // Conserver la dernière occurrence par nom (privilégier les overnumbered en fin de liste)
-        const map = new Map<string, CardRef>();
-        for (const c of out) map.set(c.name, c);
-        const unique = Array.from(map.values());
-        if (!cancelled) setRefs(unique);
+        // Garder toutes les entrées, y compris les overnumbered après 298
+        if (!cancelled) setRefs(out);
       } catch {
         // silent
       }
@@ -163,7 +160,7 @@ export default function Binder({}: BinderProps) {
           </div>
         </div>
       </div>
-      <div className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${gridColsClass}`}>
+      <div className={`grid grid-cols-1 gap-3 sm:grid-cols-2 ${gridColsClass}`}>
         {refs.length === 0 ? (
           <div className="col-span-full text-zinc-500">Chargement de la liste…</div>
         ) : (
