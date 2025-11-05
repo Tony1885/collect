@@ -7,6 +7,7 @@ import CardForm from "@/components/CardForm";
 import CollectionTable from "@/components/CollectionTable";
 import Summary from "@/components/Summary";
 import Duplicates from "@/components/Duplicates";
+import Binder from "@/components/Binder";
 
 export default function Home() {
   const [cards, setCards] = useState<CardEntry[]>([]);
@@ -50,6 +51,20 @@ export default function Home() {
     });
   }
 
+  function setOwnedFromBinder(entry: CardEntry | null) {
+    if (!entry) return;
+    if (entry.quantity <= 0) {
+      // retrait par nom (peut exister avec d'autres raretés) => on met quantité 0 pour les correspondances exactes si présentes
+      setCards((prev) => prev.filter((c) => c.name !== entry.name));
+      return;
+    }
+    setCards((prev) => {
+      const existing = prev.find((c) => c.id === entry.id);
+      if (!existing) return [...prev, entry];
+      return prev.map((c) => (c.id === entry.id ? { ...c, quantity: entry.quantity } : c));
+    });
+  }
+
   const title = useMemo(() => "Riftbound: League of Legends TCG — Portefeuille", []);
 
   return (
@@ -65,6 +80,7 @@ export default function Home() {
         <CardForm onAdd={upsert} />
         <CollectionTable cards={cards} onUpdate={update} onRemove={remove} />
         <Duplicates cards={cards} onMerge={mergeImported} />
+        <Binder cards={cards} onSetOwned={setOwnedFromBinder} />
       </main>
     </div>
   );
