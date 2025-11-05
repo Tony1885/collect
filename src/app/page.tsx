@@ -1,48 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { CardEntry } from "@/types";
-import { loadCollection, saveCollection } from "@/lib/storage";
-// Formulaire retiré sur demande; la gestion passe par le classeur
-// Tableau et import retirés
 import Binder from "@/components/Binder";
 
 export default function Home() {
-  const [cards, setCards] = useState<CardEntry[]>([]);
-
-  useEffect(() => {
-    setCards(loadCollection());
-  }, []);
-
-  useEffect(() => {
-    saveCollection(cards);
-  }, [cards]);
-
-  // Ajout via classeur uniquement
-
-  function update(entry: CardEntry) {
-    setCards((prev) => prev.map((c) => (c.id === entry.id ? entry : c)));
-  }
-
-  function remove(id: string) {
-    setCards((prev) => prev.filter((c) => c.id !== id));
-  }
-
-  function mergeImported(entries: CardEntry[]) {
-    setCards((prev) => {
-      const map = new Map(prev.map((c) => [c.id, c] as const));
-      for (const e of entries) {
-        const ex = map.get(e.id);
-        if (ex) {
-          map.set(e.id, { ...ex, quantity: ex.quantity + e.quantity });
-        } else {
-          map.set(e.id, e);
-        }
-      }
-      return Array.from(map.values());
-    });
-  }
-
   function setOwnedFromBinder(entry: CardEntry | null) {
     if (!entry) return;
     if (entry.quantity <= 0) {
@@ -67,7 +28,7 @@ export default function Home() {
           <div className="text-xs font-semibold text-amber-300/90">Origins — Set principal</div>
         </header>
 
-        <Binder cards={cards} onSetOwned={setOwnedFromBinder} />
+        <Binder />
       </main>
     </div>
   );

@@ -5,10 +5,7 @@ import type { CardEntry, Rarity } from "@/types";
 import { generateId } from "@/lib/storage";
 import { candidateImageUrls, initialsFromName } from "@/lib/images";
 
-export interface BinderProps {
-  cards: CardEntry[];
-  onSetOwned: (entry: CardEntry | null) => void; // null => remove
-}
+export interface BinderProps {}
 
 type CardRef = { name: string; number?: string };
 
@@ -30,7 +27,17 @@ function useAllCardRefs(): CardRef[] {
           if (parts.length < 2) continue;
           const num = parts[0]?.trim();
           const nm = parts[1]?.trim();
-          if (nm) out.push({ name: nm, number: num });
+          // Filtrer les OGN overnumbered (>298) et les variantes étoilées
+          const base = (num ?? "").split("/")[0];
+          const hasStar = base.includes("*");
+          let isOvernumbered = false;
+          if (/^OGN-/i.test(base)) {
+            const cleaned = base.replace(/\*$/, "");
+            const m = cleaned.match(/^OGN-(\d+)/i);
+            const n = m ? parseInt(m[1], 10) : NaN;
+            if (!isNaN(n) && n > 298) isOvernumbered = true;
+          }
+          if (nm && !hasStar && !isOvernumbered) out.push({ name: nm, number: num });
         }
         const seen = new Set<string>();
         const unique = out.filter((c) => (seen.has(c.name) ? false : (seen.add(c.name), true)));
@@ -47,10 +54,12 @@ function useAllCardRefs(): CardRef[] {
   return refs;
 }
 
-export default function Binder({ cards, onSetOwned }: BinderProps) {
+export default function Binder({}: BinderProps) {
   const refs = useAllCardRefs();
   const [imageMap, setImageMap] = useState<Record<string, string>>({});
   const [query, setQuery] = useState("");
+  const [cols, setCols] = useState<number>(4);
+  const [statusMap, setStatusMap] = useState<Record<string, { owned: boolean; duplicate: boolean; foil: boolean }>>({});
 
   useEffect(() => {
     (async () => {
@@ -63,13 +72,22 @@ export default function Binder({ cards, onSetOwned }: BinderProps) {
     })();
   }, []);
 
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/collection", { cache: "no-cache" });
+        if (!res.ok) return;
+        const data = (await res.json()) as Record<string, { owned: boolean; duplicate: boolean; foil: boolean }>;
+        setStatusMap(data || {});
+      } catch {}
+    })();
+  }, []);
+
   const ownedSet = useMemo(() => {
     const s = new Set<string>();
-    for (const c of cards) {
-      if (c.quantity > 0) s.add(c.name);
-    }
+    for (const name in statusMap) if (statusMap[name]?.owned) s.add(name);
     return s;
-  }, [cards]);
+  }, [statusMap]);
 
   const numberByName = useMemo(() => {
     const m = new Map<string, string | undefined>();
@@ -93,18 +111,22 @@ export default function Binder({ cards, onSetOwned }: BinderProps) {
     });
   }, [refs, query]);
 
-  function toggle(name: string, nextOwned: boolean) {
-    if (nextOwned) {
-      const rarity: Rarity = "Commune"; // défaut pour la case du classeur
-      const id = generateId(name, rarity, false);
-      onSetOwned({ id, name, rarity, quantity: 1, isFoil: false });
-    } else {
-      onSetOwned({ id: "", name, rarity: "Commune", quantity: 0 });
-    }
-  }
+  const gridColsClass = useMemo(() => {
+    // Table statique pour Tailwind (évite les classes dynamiques non détectées)
+    const map: Record<number, string> = {
+      4: "md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4",
+      5: "md:grid-cols-5 lg:grid-cols-5 xl:grid-cols-5",
+      6: "md:grid-cols-6 lg:grid-cols-6 xl:grid-cols-6",
+      7: "md:grid-cols-7 lg:grid-cols-7 xl:grid-cols-7",
+      8: "md:grid-cols-8 lg:grid-cols-8 xl:grid-cols-8",
+    };
+    return map[Math.min(8, Math.max(4, cols))] ?? map[4];
+  }, [cols]);
 
-  function getQuantityByName(name: string): number {
-    return cards.filter((c) => c.name === name).reduce((s, c) => s + c.quantity, 0);
+  // Plus de gestion de quantité côté front; l'état vient du back-office
+
+  function getQuantityByName(_name: string): number {
+    return statusMap[_name]?.owned ? 1 : 0;
   }
 
   const [detailName, setDetailName] = useState<string | null>(null);
@@ -141,17 +163,32 @@ export default function Binder({ cards, onSetOwned }: BinderProps) {
     <section className="runeterra-frame p-4">
       <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-sm font-semibold runeterra-title">Classeur — toutes les cartes</div>
-        <div className="relative w-full sm:w-80">
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Rechercher par nom ou numéro (ex: OGN-001, Jinx)"
-            className="w-full rounded-md border border-zinc-700/60 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-amber-500/60 focus:outline-none"
-          />
-          <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500">⌕</div>
+        <div className="flex w-full flex-col items-stretch gap-3 sm:w-auto sm:flex-row sm:items-center">
+          <div className="relative w-full sm:w-80">
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Rechercher par nom ou numéro (ex: OGN-001, Jinx)"
+              className="w-full rounded-md border border-zinc-700/60 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:border-amber-500/60 focus:outline-none"
+            />
+            <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500">⌕</div>
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-xs text-zinc-400">Cartes/ligne</label>
+            <input
+              type="range"
+              min={4}
+              max={8}
+              step={1}
+              value={cols}
+              onChange={(e) => setCols(parseInt(e.target.value))}
+              className="h-2 w-40 cursor-pointer appearance-none rounded bg-zinc-800"
+            />
+            <div className="min-w-6 text-right text-xs text-zinc-300">{cols}</div>
+          </div>
         </div>
       </div>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
+      <div className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${gridColsClass}`}>
         {refs.length === 0 ? (
           <div className="col-span-full text-zinc-500">Chargement de la liste…</div>
         ) : (
@@ -160,14 +197,10 @@ export default function Binder({ cards, onSetOwned }: BinderProps) {
             const num = normalizeNumber(numberByName.get(n));
             const riftmana = num ? `https://riftmana.com/wp-content/uploads/Cards/${num}.webp` : undefined;
             const urls = [imageMap[n], riftmana, ...candidateImageUrls(n)].filter(Boolean) as string[];
+            const foil = !!statusMap[n]?.foil;
+            const duplicate = !!statusMap[n]?.duplicate;
             return (
-              <CardTile
-                key={n}
-                name={n}
-                imageUrls={urls}
-                owned={owned}
-                onClick={() => openDetails(n)}
-              />
+              <CardTile key={n} name={n} imageUrls={urls} owned={owned} foil={foil} duplicate={duplicate} onClick={() => openDetails(n)} />
             );
           })
         )}
@@ -188,7 +221,7 @@ export default function Binder({ cards, onSetOwned }: BinderProps) {
   );
 }
 
-function CardImage({ name, urls, owned }: { name: string; urls: string[]; owned: boolean }) {
+function CardImage({ name, urls, owned, foil, duplicate }: { name: string; urls: string[]; owned: boolean; foil?: boolean; duplicate?: boolean }) {
   const [idx, setIdx] = useState(0);
   const [broken, setBroken] = useState(false);
   const current = urls[idx];
@@ -206,32 +239,29 @@ function CardImage({ name, urls, owned }: { name: string; urls: string[]; owned:
   }
 
   return (
-    // Utilise <img> pour éviter la config d’images externes
-    <img
-      src={current}
-      alt={name}
-      loading="lazy"
-      className="h-full w-full object-cover"
-      style={{ filter: owned ? "none" : "grayscale(1) brightness(0.7)" }}
-      onError={() => {
-        if (idx < urls.length - 1) setIdx(idx + 1);
-        else setBroken(true);
-      }}
-    />
+    <div className="h-full w-full">
+      <img
+        src={current}
+        alt={name}
+        loading="lazy"
+        className="h-full w-full object-cover"
+        style={{ filter: owned ? "none" : "grayscale(1) brightness(0.7)" }}
+        onError={() => {
+          if (idx < urls.length - 1) setIdx(idx + 1);
+          else setBroken(true);
+        }}
+      />
+      {foil && (
+        <div className="pointer-events-none absolute right-1 top-1 text-lg" title="Foil">✨</div>
+      )}
+      {duplicate && (
+        <div className="pointer-events-none absolute left-1 top-1 rounded bg-black/60 px-1 text-xs text-amber-200" title="Double">x2</div>
+      )}
+    </div>
   );
 }
 
-function CardTile({
-  name,
-  imageUrls,
-  owned,
-  onClick,
-}: {
-  name: string;
-  imageUrls: string[];
-  owned: boolean;
-  onClick: () => void;
-}) {
+function CardTile({ name, imageUrls, owned, foil, duplicate, onClick }: { name: string; imageUrls: string[]; owned: boolean; foil?: boolean; duplicate?: boolean; onClick: () => void }) {
   const [transform, setTransform] = useState<string>("perspective(800px) rotateX(0deg) rotateY(0deg) scale(1)");
 
   function handleMove(e: React.MouseEvent<HTMLDivElement>) {
@@ -260,7 +290,7 @@ function CardTile({
       onClick={onClick}
     >
       <div className="relative aspect-[3/4] w-full">
-        <CardImage name={name} urls={imageUrls} owned={owned} />
+        <CardImage name={name} urls={imageUrls} owned={owned} foil={foil} duplicate={duplicate} />
         <div
           className="pointer-events-none absolute inset-0 opacity-0 transition-opacity group-hover:opacity-100"
           style={{ background: "radial-gradient(600px circle at var(--mx,50%) var(--my,50%), rgba(255,255,255,0.1), transparent 40%)" }}
