@@ -54,8 +54,8 @@ export default function Binder({ cards, onSetOwned }: BinderProps) {
     return s;
   }, [cards]);
 
-  function toggle(name: string, checked: boolean) {
-    if (checked) {
+  function toggle(name: string, nextOwned: boolean) {
+    if (nextOwned) {
       const rarity: Rarity = "Commune"; // défaut pour la case du classeur
       const id = generateId(name, rarity, false);
       onSetOwned({ id, name, rarity, quantity: 1, isFoil: false });
@@ -75,27 +75,13 @@ export default function Binder({ cards, onSetOwned }: BinderProps) {
             const owned = ownedSet.has(n);
             const urls = candidateImageUrls(n);
             return (
-              <label
+              <CardTile
                 key={n}
-                className={`group relative flex cursor-pointer flex-col overflow-hidden rounded-lg border text-sm transition ${
-                  owned
-                    ? "border-amber-500/40 bg-zinc-900"
-                    : "border-zinc-800 bg-zinc-900"
-                }`}
-              >
-                <div className="relative aspect-[3/4] w-full">
-                  <CardImage name={n} urls={urls} owned={owned} />
-                </div>
-                <div className="flex items-center justify-between gap-2 px-2 py-2">
-                  <span className={`line-clamp-2 ${owned ? "text-amber-100" : "text-zinc-400"}`}>{n}</span>
-                  <input
-                    type="checkbox"
-                    className="accent-amber-500"
-                    checked={owned}
-                    onChange={(e) => toggle(n, e.target.checked)}
-                  />
-                </div>
-              </label>
+                name={n}
+                imageUrls={urls}
+                owned={owned}
+                onClick={() => toggle(n, !owned)}
+              />
             );
           })
         )}
@@ -134,6 +120,58 @@ function CardImage({ name, urls, owned }: { name: string; urls: string[]; owned:
         else setBroken(true);
       }}
     />
+  );
+}
+
+function CardTile({
+  name,
+  imageUrls,
+  owned,
+  onClick,
+}: {
+  name: string;
+  imageUrls: string[];
+  owned: boolean;
+  onClick: () => void;
+}) {
+  const [transform, setTransform] = useState<string>("perspective(800px) rotateX(0deg) rotateY(0deg) scale(1)");
+
+  function handleMove(e: React.MouseEvent<HTMLDivElement>) {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const midX = rect.width / 2;
+    const midY = rect.height / 2;
+    const rotateY = ((x - midX) / midX) * 8; // -8..8
+    const rotateX = -((y - midY) / midY) * 8; // -8..8
+    setTransform(`perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.02)`);
+  }
+
+  function handleLeave() {
+    setTransform("perspective(800px) rotateX(0deg) rotateY(0deg) scale(1)");
+  }
+
+  return (
+    <div
+      className={`group relative flex cursor-pointer flex-col overflow-hidden rounded-lg border text-sm transition ${
+        owned ? "border-amber-500/40 bg-zinc-900" : "border-zinc-800 bg-zinc-900"
+      }`}
+      style={{ transform, transition: "transform 120ms ease" }}
+      onMouseMove={handleMove}
+      onMouseLeave={handleLeave}
+      onClick={onClick}
+    >
+      <div className="relative aspect-[3/4] w-full">
+        <CardImage name={name} urls={imageUrls} owned={owned} />
+        <div
+          className="pointer-events-none absolute inset-0 opacity-0 transition-opacity group-hover:opacity-100"
+          style={{ background: "radial-gradient(600px circle at var(--mx,50%) var(--my,50%), rgba(255,255,255,0.1), transparent 40%)" }}
+        />
+      </div>
+      <div className={`px-2 py-2 ${owned ? "text-amber-100" : "text-zinc-400"}`}>
+        <span className="line-clamp-2">{name}</span>
+      </div>
+    </div>
   );
 }
 
