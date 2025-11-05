@@ -19,6 +19,7 @@ export interface CardFormProps {
 
 export default function CardForm({ onAdd }: CardFormProps) {
   const [name, setName] = useState("");
+  const [nameMode, setNameMode] = useState<"select" | "manual">("select");
   const [rarity, setRarity] = useState<Rarity>("Commune");
   const [quantity, setQuantity] = useState<number>(1);
   const [isFoil, setIsFoil] = useState<boolean>(false);
@@ -47,19 +48,51 @@ export default function CardForm({ onAdd }: CardFormProps) {
   return (
     <form onSubmit={handleSubmit} className="w-full rounded-xl border border-zinc-800/60 bg-gradient-to-br from-zinc-950 to-zinc-900 p-4 shadow-[0_0_40px_-15px_rgba(0,0,0,0.8)]">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-5">
-        <div className="col-span-2">
-          <input
-            className="w-full rounded-lg border border-zinc-700/60 bg-zinc-900 px-3 py-2 text-zinc-100 placeholder-zinc-500 outline-none focus:border-amber-400/70"
-            placeholder="Nom de la carte"
-            list="card-names"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-          <datalist id="card-names">
-            {CARD_NAMES.map((n) => (
-              <option key={n} value={n} />
-            ))}
-          </datalist>
+        <div className="col-span-2 flex flex-col gap-2">
+          {nameMode === "select" ? (
+            <select
+              className="w-full rounded-lg border border-zinc-700/60 bg-zinc-900 px-3 py-2 text-zinc-100 outline-none focus:border-amber-400/70"
+              value={name || "__placeholder__"}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v === "__manual__") {
+                  setNameMode("manual");
+                  setName("");
+                } else {
+                  setName(v);
+                }
+              }}
+            >
+              <option value="__placeholder__" disabled>
+                Sélectionner un nom de carte
+              </option>
+              {CARD_NAMES.map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+              <option value="__manual__">Autre (saisie manuelle)</option>
+            </select>
+          ) : (
+            <div className="flex items-center gap-2">
+              <input
+                className="w-full rounded-lg border border-zinc-700/60 bg-zinc-900 px-3 py-2 text-zinc-100 placeholder-zinc-500 outline-none focus:border-amber-400/70"
+                placeholder="Nom de la carte"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+              <button
+                type="button"
+                className="rounded-md border border-zinc-700/60 px-3 py-2 text-zinc-200 hover:bg-zinc-800"
+                onClick={() => {
+                  setNameMode("select");
+                  setName("");
+                }}
+              >
+                Liste
+              </button>
+            </div>
+          )}
         </div>
         <select
           className="rounded-lg border border-zinc-700/60 bg-zinc-900 px-3 py-2 text-zinc-100 outline-none focus:border-amber-400/70"
