@@ -1,5 +1,23 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Riftbound: League of Legends TCG – Portfolio & Collection
+
+Features:
+
+- Add cards (name, rarity, quantity, Holo/Foil)
+- Estimated value with a simulated pricing table
+- Local persistence (localStorage)
+- Import a list file (txt/csv) to generate a "Duplicates list"
+- Runeterra-inspired visual theme
+
+Code layout:
+
+- `src/types.ts`: card types and rarities
+- `src/lib/pricing.ts`: simulated prices (editable)
+- `src/lib/storage.ts`: local persistence
+- `src/components/*`: UI components (form, table, summary, imports)
+- `src/app/page.tsx`: composition of the app
+
 ## Getting Started
 
 First, run the development server:
