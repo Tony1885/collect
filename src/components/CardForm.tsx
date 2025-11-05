@@ -1,0 +1,86 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import type { CardEntry, Rarity } from "@/types";
+import { generateId } from "@/lib/storage";
+
+const RARITIES: Rarity[] = [
+  "Commune",
+  "Peu Commune",
+  "Rare",
+  "Épique",
+  "Légendaire",
+];
+
+export interface CardFormProps {
+  onAdd: (entry: CardEntry) => void;
+}
+
+export default function CardForm({ onAdd }: CardFormProps) {
+  const [name, setName] = useState("");
+  const [rarity, setRarity] = useState<Rarity>("Commune");
+  const [quantity, setQuantity] = useState<number>(1);
+  const [isFoil, setIsFoil] = useState<boolean>(false);
+
+  const canSubmit = useMemo(() => name.trim().length > 0 && quantity > 0, [name, quantity]);
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!canSubmit) return;
+    const entry: CardEntry = {
+      id: generateId(name, rarity, isFoil),
+      name: name.trim(),
+      rarity,
+      quantity,
+      isFoil,
+    };
+    onAdd(entry);
+    setQuantity(1);
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="w-full rounded-xl border border-zinc-800/60 bg-gradient-to-br from-zinc-950 to-zinc-900 p-4 shadow-[0_0_40px_-15px_rgba(0,0,0,0.8)]">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-5">
+        <input
+          className="col-span-2 rounded-lg border border-zinc-700/60 bg-zinc-900 px-3 py-2 text-zinc-100 placeholder-zinc-500 outline-none focus:border-amber-400/70"
+          placeholder="Nom de la carte"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+        <select
+          className="rounded-lg border border-zinc-700/60 bg-zinc-900 px-3 py-2 text-zinc-100 outline-none focus:border-amber-400/70"
+          value={rarity}
+          onChange={(e) => setRarity(e.target.value as Rarity)}
+        >
+          {RARITIES.map((r) => (
+            <option key={r} value={r}>
+              {r}
+            </option>
+          ))}
+        </select>
+        <input
+          type="number"
+          min={1}
+          className="rounded-lg border border-zinc-700/60 bg-zinc-900 px-3 py-2 text-zinc-100 outline-none focus:border-amber-400/70"
+          value={quantity}
+          onChange={(e) => setQuantity(Number(e.target.value))}
+        />
+        <label className="flex items-center gap-2 text-zinc-200">
+          <input type="checkbox" checked={isFoil} onChange={(e) => setIsFoil(e.target.checked)} />
+          Holo/Foil
+        </label>
+      </div>
+      <div className="mt-3 flex justify-end">
+        <button
+          type="submit"
+          disabled={!canSubmit}
+          className="rounded-lg bg-amber-500 px-4 py-2 font-medium text-black hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          Ajouter
+        </button>
+      </div>
+    </form>
+  );
+}
+
+
