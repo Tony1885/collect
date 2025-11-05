@@ -4,9 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { CardEntry } from "@/types";
 import { loadCollection, saveCollection } from "@/lib/storage";
 // Formulaire retiré sur demande; la gestion passe par le classeur
-import CollectionTable from "@/components/CollectionTable";
-import Summary from "@/components/Summary";
-import Duplicates from "@/components/Duplicates";
+// Tableau et import retirés
 import Binder from "@/components/Binder";
 
 export default function Home() {
@@ -59,7 +57,7 @@ export default function Home() {
     });
   }
 
-  const title = useMemo(() => "Riftbound: League of Legends TCG — Portefeuille", []);
+  const title = useMemo(() => "Riftbound: League of Legends TCG", []);
 
   return (
     <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-amber-900/20 via-zinc-950 to-black">
@@ -70,9 +68,6 @@ export default function Home() {
           </h1>
         </header>
 
-        <Summary cards={cards} />
-        <CollectionTable cards={cards} onUpdate={update} onRemove={remove} />
-        <Duplicates cards={cards} onMerge={mergeImported} />
         <Binder cards={cards} onSetOwned={setOwnedFromBinder} />
       </main>
     </div>
