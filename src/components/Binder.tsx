@@ -28,8 +28,34 @@ function useAllCardRefs(): CardRef[] {
           const nm = parts[1]?.trim();
           if (nm) out.push({ name: nm, number: num });
         }
-        // Garder toutes les entrées, y compris les overnumbered après 298
-        if (!cancelled) setRefs(out);
+        // Dédupliquer par nom: garder une entrée canonique (préférer non-variant, sans *, numéro le + petit)
+        function rank(n?: string): { hasStar: boolean; hasSuffix: boolean; num: number } {
+          const base = (n ?? "").split("/")[0];
+          const hasStar = /\*/.test(base);
+          const m = base.match(/^(OGN|OGS)-(\d+)([a-z])?/i);
+          const num = m ? parseInt(m[2], 10) : Number.MAX_SAFE_INTEGER;
+          const hasSuffix = !!(m && m[3]);
+          return { hasStar, hasSuffix, num: isNaN(num) ? Number.MAX_SAFE_INTEGER : num };
+        }
+        const map = new Map<string, CardRef>();
+        for (const c of out) {
+          const prev = map.get(c.name);
+          if (!prev) {
+            map.set(c.name, c);
+            continue;
+          }
+          const rPrev = rank(prev.number);
+          const rNext = rank(c.number);
+          // meilleur si: pas d'étoile vs étoile; pas de suffixe vs suffixe; numéro plus petit
+          const better = (
+            (rPrev.hasStar && !rNext.hasStar) ||
+            (!rPrev.hasStar && !rPrev.hasSuffix && rNext.hasSuffix) ||
+            (!rPrev.hasStar && !rNext.hasStar && rPrev.hasSuffix === rNext.hasSuffix && rNext.num < rPrev.num)
+          );
+          if (better) map.set(c.name, c);
+        }
+        const unique = Array.from(map.values());
+        if (!cancelled) setRefs(unique);
       } catch {
         // silent
       }

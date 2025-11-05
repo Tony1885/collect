@@ -27,9 +27,34 @@ export default function AdminPage() {
           const name = parts[1]?.trim();
           if (name) out.push({ name, number });
         }
+        // Dédupliquer par nom avec même logique que le front
+        function rank(n?: string): { hasStar: boolean; hasSuffix: boolean; num: number } {
+          const base = (n ?? "").split("/")[0];
+          const hasStar = /\*/.test(base);
+          const m = base.match(/^(OGN|OGS)-(\d+)([a-z])?/i);
+          const num = m ? parseInt(m[2], 10) : Number.MAX_SAFE_INTEGER;
+          const hasSuffix = !!(m && m[3]);
+          return { hasStar, hasSuffix, num: isNaN(num) ? Number.MAX_SAFE_INTEGER : num };
+        }
+        const mapByName = new Map<string, { name: string; number?: string }>();
+        for (const c of out) {
+          const prev = mapByName.get(c.name);
+          if (!prev) mapByName.set(c.name, c);
+          else {
+            const rPrev = rank(prev.number);
+            const rNext = rank(c.number);
+            const better = (
+              (rPrev.hasStar && !rNext.hasStar) ||
+              (!rPrev.hasStar && !rPrev.hasSuffix && rNext.hasSuffix) ||
+              (!rPrev.hasStar && !rNext.hasStar && rPrev.hasSuffix === rNext.hasSuffix && rNext.num < rPrev.num)
+            );
+            if (better) mapByName.set(c.name, c);
+          }
+        }
+        const deduped = Array.from(mapByName.values());
         const m = (await mapRes.json()) as Record<string, CardRow>;
         if (!cancelled) {
-          setRefs(out);
+          setRefs(deduped);
           setMap(m || {});
         }
       } catch {}
