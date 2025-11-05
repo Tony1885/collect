@@ -18,7 +18,10 @@ interface CardRef { number?: string; name: string }
 function normalizeNumber(num?: string): string | undefined {
   if (!num) return undefined;
   const trimmed = num.trim();
-  return trimmed.split("/")[0] || trimmed;
+  const base = trimmed.split("/")[0] || trimmed;
+  const hasStar = base.includes("*");
+  const clean = base.replace(/\*/g, "");
+  return hasStar ? `${clean}s` : clean;
 }
 
 function slugify(name: string): string {

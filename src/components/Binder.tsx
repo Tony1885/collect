@@ -82,8 +82,10 @@ export default function Binder({}: BinderProps) {
   function normalizeNumber(num?: string): string | undefined {
     if (!num) return undefined;
     const trimmed = num.trim();
-    const base = trimmed.split("/")[0] || trimmed;
-    return base.replace(/\*/g, "");
+    const base = trimmed.split("/")[0] || trimmed; // ex: OGN-306* ou OGN-306
+    const hasStar = base.includes("*");
+    const clean = base.replace(/\*/g, "");
+    return hasStar ? `${clean}s` : clean; // cartes signées: suffixe 's'
   }
 
   const filteredRefs = useMemo(() => {
@@ -154,6 +156,23 @@ export default function Binder({}: BinderProps) {
     setDetailName(name);
     setDetailUrls(urls);
     setDetailRawNum(rawNum ?? null);
+    // Effets audio spéciaux
+    if (num) {
+      const audioByCard: Array<{ re: RegExp; src: string }> = [
+        { re: /OGN-307/i, src: "/teemo.ogg" },
+        { re: /OGN-308/i, src: "/viktor.ogg" },
+        { re: /OGN-309/i, src: "/missf.ogg" },
+        { re: /OGN-310/i, src: "/sett.ogg" },
+      ];
+      const m = audioByCard.find((x) => x.re.test(num));
+      if (m) {
+        try {
+          const audio = new Audio(m.src);
+          audio.volume = 0.8;
+          void audio.play();
+        } catch {}
+      }
+    }
   }
 
   function closeDetails() {
