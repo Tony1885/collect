@@ -51,16 +51,24 @@ export default function AdminPage() {
   }
 
   async function runVerify() {
-    const res = await fetch("/api/admin/verify");
-    const data = await res.json();
-    alert(`Vérification: list=${data?.counts?.list}, db=${data?.counts?.db}, manquantes=${data?.counts?.missing}. Colonnes manquantes: ${(data?.missingColumns ?? []).join(", ") || "aucune"}`);
+    try {
+      const res = await fetch("/api/admin/verify");
+      const data = await res.json();
+      if (!res.ok) {
+        alert(`Vérification: erreur ${res.status} — ${data?.error ?? "inconnue"}`);
+        return;
+      }
+      alert(`Vérification: list=${data?.counts?.list}, db=${data?.counts?.db}, manquantes=${data?.counts?.missing}. Colonnes manquantes: ${(data?.missingColumns ?? []).join(", ") || "aucune"}`);
+    } catch (e) {
+      alert(`Vérification: échec (${String(e)})`);
+    }
   }
 
   async function runPing() {
     try {
       const res = await fetch("/api/admin/ping");
       const data = await res.json();
-      if (data?.ok) setDbInfo(`DB OK — ${data?.rows} lignes`);
+      if (data?.ok) setDbInfo(`DB OK — ${data?.rows} lignes — ${data?.connection ?? ""}`);
       else setDbInfo(`DB erreur: ${data?.error ?? "inconnue"}`);
     } catch {
       setDbInfo("DB erreur: échec ping");

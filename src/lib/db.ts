@@ -6,6 +6,9 @@ let pool: Pool | null = null;
 function getPool(): Pool {
   if (!pool) {
     const connectionString = process.env.DATABASE_URL_UNPOOLED ?? process.env.DATABASE_URL ?? "";
+    if (!connectionString) {
+      throw new Error("DATABASE_URL_UNPOOLED/DATABASE_URL non définies (voir variables d'environnement)");
+    }
     pool = new Pool({ connectionString, max: 1 });
   }
   return pool;
