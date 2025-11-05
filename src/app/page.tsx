@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { CardEntry } from "@/types";
 import { loadCollection, saveCollection } from "@/lib/storage";
-import CardForm from "@/components/CardForm";
+// Formulaire retiré sur demande; la gestion passe par le classeur
 import CollectionTable from "@/components/CollectionTable";
 import Summary from "@/components/Summary";
 import Duplicates from "@/components/Duplicates";
@@ -20,13 +20,7 @@ export default function Home() {
     saveCollection(cards);
   }, [cards]);
 
-  function upsert(entry: CardEntry) {
-    setCards((prev) => {
-      const existing = prev.find((c) => c.id === entry.id);
-      if (!existing) return [...prev, entry];
-      return prev.map((c) => (c.id === entry.id ? { ...c, quantity: c.quantity + entry.quantity } : c));
-    });
-  }
+  // Ajout via classeur uniquement
 
   function update(entry: CardEntry) {
     setCards((prev) => prev.map((c) => (c.id === entry.id ? entry : c)));
@@ -77,7 +71,6 @@ export default function Home() {
         </header>
 
         <Summary cards={cards} />
-        <CardForm onAdd={upsert} />
         <CollectionTable cards={cards} onUpdate={update} onRemove={remove} />
         <Duplicates cards={cards} onMerge={mergeImported} />
         <Binder cards={cards} onSetOwned={setOwnedFromBinder} />

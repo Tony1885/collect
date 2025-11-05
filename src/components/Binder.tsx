@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { CardEntry, Rarity } from "@/types";
 import { generateId } from "@/lib/storage";
+import { candidateImageUrls, initialsFromName } from "@/lib/images";
 
 export interface BinderProps {
   cards: CardEntry[];
@@ -72,29 +73,67 @@ export default function Binder({ cards, onSetOwned }: BinderProps) {
         ) : (
           names.map((n) => {
             const owned = ownedSet.has(n);
+            const urls = candidateImageUrls(n);
             return (
               <label
                 key={n}
-                className={`group flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition ${
+                className={`group relative flex cursor-pointer flex-col overflow-hidden rounded-lg border text-sm transition ${
                   owned
-                    ? "border-amber-500/40 bg-amber-500/10 text-amber-100"
-                    : "border-zinc-800 bg-zinc-900 text-zinc-400"
+                    ? "border-amber-500/40 bg-zinc-900"
+                    : "border-zinc-800 bg-zinc-900"
                 }`}
-                style={{ filter: owned ? "none" : "grayscale(1) brightness(0.8)" }}
               >
-                <input
-                  type="checkbox"
-                  className="accent-amber-500"
-                  checked={owned}
-                  onChange={(e) => toggle(n, e.target.checked)}
-                />
-                <span className="line-clamp-2">{n}</span>
+                <div className="relative aspect-[3/4] w-full">
+                  <CardImage name={n} urls={urls} owned={owned} />
+                </div>
+                <div className="flex items-center justify-between gap-2 px-2 py-2">
+                  <span className={`line-clamp-2 ${owned ? "text-amber-100" : "text-zinc-400"}`}>{n}</span>
+                  <input
+                    type="checkbox"
+                    className="accent-amber-500"
+                    checked={owned}
+                    onChange={(e) => toggle(n, e.target.checked)}
+                  />
+                </div>
               </label>
             );
           })
         )}
       </div>
     </section>
+  );
+}
+
+function CardImage({ name, urls, owned }: { name: string; urls: string[]; owned: boolean }) {
+  const [idx, setIdx] = useState(0);
+  const [broken, setBroken] = useState(false);
+  const current = urls[idx];
+
+  if (!current || broken) {
+    const initials = initialsFromName(name);
+    return (
+      <div
+        className={`flex h-full w-full items-center justify-center ${owned ? "bg-amber-500/10" : "bg-zinc-800"}`}
+        style={{ filter: owned ? "none" : "grayscale(1) brightness(0.7)" }}
+      >
+        <span className={`text-2xl font-bold ${owned ? "text-amber-200" : "text-zinc-400"}`}>{initials}</span>
+      </div>
+    );
+  }
+
+  return (
+    // Utilise <img> pour éviter la config d’images externes
+    <img
+      src={current}
+      alt={name}
+      loading="lazy"
+      className="h-full w-full object-cover"
+      style={{ filter: owned ? "none" : "grayscale(1) brightness(0.7)" }}
+      onError={() => {
+        if (idx < urls.length - 1) setIdx(idx + 1);
+        else setBroken(true);
+      }}
+    />
   );
 }
 
