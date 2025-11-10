@@ -2,6 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Binder from "@/components/Binder";
+import dynamic from "next/dynamic";
+
+const MusicButton = dynamic(() => import("@/components/MusicButton"), { ssr: false });
 
 export default function Home() {
 
@@ -19,6 +22,7 @@ export default function Home() {
         </header>
 
         <Binder />
+        <MusicButton />
       </main>
     </div>
   );
